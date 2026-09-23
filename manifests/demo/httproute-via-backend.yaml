@@ -1,0 +1,22 @@
+# Route B — same workload, reached through the Backend CR instead of the
+# Service. URLRewrite so /via-backend lands on httpbin's /headers and returns
+# a real response rather than a 404.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httpbin-via-backend
+  namespace: httpbin
+spec:
+  parentRefs:
+  - name: demo-gateway
+  rules:
+  - matches:
+    - path: { type: PathPrefix, value: /via-backend }
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path: { type: ReplacePrefixMatch, replacePrefixMatch: /headers }
+    backendRefs:
+    - group: gateway.kgateway.dev
+      kind: Backend
+      name: httpbin-static

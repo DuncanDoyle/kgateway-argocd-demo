@@ -1,0 +1,15 @@
+# Static Backend pointing at httpbin's own in-cluster DNS name. Contrived on
+# purpose: it exercises the Backend CRD's status without an off-cluster
+# endpoint, keeping the demo offline-capable.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  name: httpbin-static
+  namespace: httpbin
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  static:
+    hosts:
+    - host: httpbin.httpbin.svc.cluster.local
+      port: 8000

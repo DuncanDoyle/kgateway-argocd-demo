@@ -1,0 +1,16 @@
+# Route A — ordinary Service backendRef. The TrafficPolicy attaches here,
+# and only here, which is what makes the two paths visibly differ.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httpbin-via-service
+  namespace: httpbin
+spec:
+  parentRefs:
+  - name: demo-gateway
+  rules:
+  - matches:
+    - path: { type: PathPrefix, value: /headers }
+    backendRefs:
+    - name: httpbin
+      port: 8000

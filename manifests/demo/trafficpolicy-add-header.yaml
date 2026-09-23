@@ -1,0 +1,18 @@
+# Simplest visible effect: add a request header that httpbin echoes straight
+# back in its /headers response body. headerModifiers rather than
+# transformation — declarative, no templating DSL to explain.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  name: add-demo-header
+  namespace: httpbin
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: httpbin-via-service
+  headerModifiers:
+    request:
+      set:
+      - name: X-Kgateway-Demo
+        value: hello-from-trafficpolicy

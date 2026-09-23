@@ -1,0 +1,41 @@
+# Sync wave -1: the workload exists before anything routing to it, so no route
+# is transiently unresolvable. This is the ordering answer from the spec —
+# transient unresolvable references are prevented by declaring order, not by
+# health-check cleverness.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin
+  namespace: httpbin
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: httpbin }
+  template:
+    metadata:
+      labels: { app: httpbin }
+    spec:
+      containers:
+      - name: httpbin
+        # Pinned by digest so extracted fixtures are reproducible.
+        image: docker.io/mccutchen/go-httpbin:v2.9.2@sha256:8b27c0fcea0d386992f26d33c0eaadf1709e759f9d3e8b6622d276d10d0569fe
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet: { path: /status/200, port: 8080 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin
+  namespace: httpbin
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  selector: { app: httpbin }
+  ports:
+  - name: http
+    port: 8000          # what routes and the Backend target
+    targetPort: 8080    # what go-httpbin actually listens on
