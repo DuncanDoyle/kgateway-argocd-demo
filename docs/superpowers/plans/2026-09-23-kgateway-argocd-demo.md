@@ -12,7 +12,9 @@
 
 ## Global Constraints
 
-- **Repo:** `DuncanDoyle/kgw-argocd-demo`, public from the first commit. Local path `~/Development/github/kgw-argocd-demo`.
+- **Repo:** `DuncanDoyle/kgateway-argocd-demo` — already created and public. Local path `~/Development/github/kgateway-argocd-demo`.
+  - **Push remote (SSH):** `git@github.com:DuncanDoyle/kgateway-argocd-demo.git`
+  - **`REPO_URL` for ArgoCD (HTTPS):** `https://github.com/DuncanDoyle/kgateway-argocd-demo.git` — ArgoCD pulls anonymously and cannot use an SSH URL without a key Secret, which this demo deliberately avoids. These two are NOT interchangeable.
 - **Gateway API:** `v1.6.1`, Standard channel. Must be installed **before** kgateway — no kgateway chart bundles these CRDs.
 - **kgateway:** `v2.4.5`, charts `oci://cr.kgateway.dev/kgateway-dev/charts/kgateway-crds` and `oci://cr.kgateway.dev/kgateway-dev/charts/kgateway`, namespace `kgateway-system`. (OCI path and version verified 2026-09-23.)
 - **Argo CD:** chart `argo-cd` version `10.9.2` from `https://argoproj.github.io/argo-helm`, namespace `argocd`, installed with `timeout.reconciliation: 10s`.
@@ -28,9 +30,9 @@
 ### Task 1: Repository skeleton and pinned configuration
 
 **Files:**
-- Create: `~/Development/github/kgw-argocd-demo/env.sh`
-- Create: `~/Development/github/kgw-argocd-demo/.gitignore`
-- Create: `~/Development/github/kgw-argocd-demo/README.md`
+- Create: `~/Development/github/kgateway-argocd-demo/env.sh`
+- Create: `~/Development/github/kgateway-argocd-demo/.gitignore`
+- Create: `~/Development/github/kgateway-argocd-demo/README.md`
 - Move: `docs/superpowers/specs/2026-09-22-kgateway-argocd-demo-design.md` and `docs/superpowers/plans/2026-09-23-kgateway-argocd-demo.md` into the new repo, preserving paths
 
 **Interfaces:**
@@ -40,8 +42,8 @@
 - [ ] **Step 1: Create the repo directory and initialise git**
 
 ```bash
-mkdir -p ~/Development/github/kgw-argocd-demo
-cd ~/Development/github/kgw-argocd-demo
+mkdir -p ~/Development/github/kgateway-argocd-demo
+cd ~/Development/github/kgateway-argocd-demo
 git init -b main
 ```
 
@@ -54,7 +56,9 @@ git init -b main
 # REPO_URL/REPO_REVISION here and nothing else.
 
 # --- git source ArgoCD pulls manifests from -------------------------------
-export REPO_URL="https://github.com/DuncanDoyle/kgw-argocd-demo.git"
+# HTTPS, not SSH: ArgoCD pulls anonymously and has no key. The SSH form is
+# only for our own pushes (git remote origin).
+export REPO_URL="https://github.com/DuncanDoyle/kgateway-argocd-demo.git"
 export REPO_REVISION="HEAD"
 
 # --- pinned external artifacts --------------------------------------------
@@ -133,18 +137,18 @@ All pins live in [`env.sh`](env.sh). See that file for the authoritative list.
 - [ ] **Step 5: Move the spec and plan into the repo**
 
 ```bash
-mkdir -p ~/Development/github/kgw-argocd-demo/docs/superpowers/specs
-mkdir -p ~/Development/github/kgw-argocd-demo/docs/superpowers/plans
+mkdir -p ~/Development/github/kgateway-argocd-demo/docs/superpowers/specs
+mkdir -p ~/Development/github/kgateway-argocd-demo/docs/superpowers/plans
 cp /Users/ddoyle/Development/claude/gh_kgw-13871-argocd-claude/docs/superpowers/specs/2026-09-22-kgateway-argocd-demo-design.md \
-   ~/Development/github/kgw-argocd-demo/docs/superpowers/specs/
+   ~/Development/github/kgateway-argocd-demo/docs/superpowers/specs/
 cp /Users/ddoyle/Development/claude/gh_kgw-13871-argocd-claude/docs/superpowers/plans/2026-09-23-kgateway-argocd-demo.md \
-   ~/Development/github/kgw-argocd-demo/docs/superpowers/plans/
+   ~/Development/github/kgateway-argocd-demo/docs/superpowers/plans/
 ```
 
 - [ ] **Step 6: Verify `env.sh` sources cleanly and exports what later scripts need**
 
 ```bash
-cd ~/Development/github/kgw-argocd-demo
+cd ~/Development/github/kgateway-argocd-demo
 bash -c 'source ./env.sh && for v in REPO_URL GWAPI_MANIFEST KGATEWAY_CHART ARGOCD_CHART_VERSION HTTPBIN_IMAGE DEMO_NS SCENARIOS_NS; do
   [ -n "${!v}" ] || { echo "MISSING: $v"; exit 1; }
   echo "$v=${!v}"
@@ -153,13 +157,17 @@ done'
 
 Expected: every variable printed with a non-empty value, exit 0.
 
-- [ ] **Step 7: Commit and create the public GitHub repo**
+- [ ] **Step 7: Commit and push to the existing public repo**
+
+The repo already exists and is public — do NOT run `gh repo create`. Add the
+SSH remote and push.
 
 ```bash
-cd ~/Development/github/kgw-argocd-demo
+cd ~/Development/github/kgateway-argocd-demo
 git add .
-git commit -m "feat: repo skeleton with pinned versions"
-gh repo create DuncanDoyle/kgw-argocd-demo --public --source=. --remote=origin --push
+git commit -m "feat: repo skeleton with pinned versions"   # skip if already committed
+git remote add origin git@github.com:DuncanDoyle/kgateway-argocd-demo.git
+git push -u origin main
 ```
 
 - [ ] **Step 8: Verify the repo is reachable anonymously**
@@ -167,7 +175,9 @@ gh repo create DuncanDoyle/kgw-argocd-demo --public --source=. --remote=origin -
 ArgoCD pulls without credentials, so an unauthenticated fetch must work.
 
 ```bash
-git ls-remote https://github.com/DuncanDoyle/kgw-argocd-demo.git HEAD
+# The HTTPS form, unauthenticated — this is exactly what ArgoCD will do.
+GIT_TERMINAL_PROMPT=0 git ls-remote \
+  https://github.com/DuncanDoyle/kgateway-argocd-demo.git HEAD
 ```
 
 Expected: a SHA printed, no credential prompt.
@@ -177,8 +187,8 @@ Expected: a SHA printed, no credential prompt.
 ### Task 2: Cluster bootstrap script
 
 **Files:**
-- Create: `~/Development/github/kgw-argocd-demo/setup.sh`
-- Create: `~/Development/github/kgw-argocd-demo/teardown.sh`
+- Create: `~/Development/github/kgateway-argocd-demo/setup.sh`
+- Create: `~/Development/github/kgateway-argocd-demo/teardown.sh`
 
 **Interfaces:**
 - Consumes: every variable from `env.sh` (Task 1)
@@ -1016,7 +1026,7 @@ The expected messages in `health_test.yaml` must be what the controller
 actually wrote, not what we assume.
 
 ```bash
-cd ~/Development/github/kgw-argocd-demo
+cd ~/Development/github/kgateway-argocd-demo
 for f in out/resource_customizations/gateway.kgateway.dev/Backend/testdata/*.yaml; do
   echo "=== $f ==="
   python3 -c "
@@ -1145,7 +1155,7 @@ return hs
 - [ ] **Step 5: Copy the script in and run the test to see it pass**
 
 ```bash
-cd ~/Development/github/kgw-argocd-demo
+cd ~/Development/github/kgateway-argocd-demo
 cp healthchecks/lua/Backend/health.lua \
    ~/Development/github/argo-cd/resource_customizations/gateway.kgateway.dev/Backend/health.lua
 cd ~/Development/github/argo-cd
@@ -1159,7 +1169,7 @@ the Lua to produce a message the controller never wrote.
 - [ ] **Step 6: Commit**
 
 ```bash
-cd ~/Development/github/kgw-argocd-demo
+cd ~/Development/github/kgateway-argocd-demo
 git add healthchecks/lua/Backend/health.lua healthchecks/lua/Backend/health_test.yaml
 git commit -m "feat: Backend health check with condition aggregation"
 git push
@@ -1181,7 +1191,7 @@ git push
 - [ ] **Step 1: Read the real messages and controllerName from the fixtures**
 
 ```bash
-cd ~/Development/github/kgw-argocd-demo
+cd ~/Development/github/kgateway-argocd-demo
 for f in out/resource_customizations/gateway.kgateway.dev/TrafficPolicy/testdata/*.yaml; do
   echo "=== $f ==="
   python3 -c "
@@ -1446,7 +1456,7 @@ return hs
 - [ ] **Step 6: Copy in and run the test to see it pass**
 
 ```bash
-cd ~/Development/github/kgw-argocd-demo
+cd ~/Development/github/kgateway-argocd-demo
 cp healthchecks/lua/TrafficPolicy/health.lua \
    ~/Development/github/argo-cd/resource_customizations/gateway.kgateway.dev/TrafficPolicy/health.lua
 cd ~/Development/github/argo-cd
@@ -1458,7 +1468,7 @@ Expected: PASS for every fixture in both kinds.
 - [ ] **Step 7: Commit**
 
 ```bash
-cd ~/Development/github/kgw-argocd-demo
+cd ~/Development/github/kgateway-argocd-demo
 git add healthchecks/lua/TrafficPolicy/health.lua healthchecks/lua/TrafficPolicy/health_test.yaml
 git commit -m "feat: TrafficPolicy health check with reason branching and controller scoping"
 git push
@@ -1680,7 +1690,7 @@ kubectl -n argocd patch configmap argocd-cm \
 - [ ] **Step 7: Commit**
 
 ```bash
-cd ~/Development/github/kgw-argocd-demo
+cd ~/Development/github/kgateway-argocd-demo
 git add README.md
 git commit -m "docs: verification and argocd-cm usage"
 git push
