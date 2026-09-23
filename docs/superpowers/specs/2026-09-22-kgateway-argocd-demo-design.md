@@ -3,7 +3,7 @@
 **Date:** 2026-09-22
 **Status:** Revised after review (2026-09-23); awaiting approval. Implementation not started.
 **Drives:** [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871) — Add ArgoCD health checks for `gateway.kgateway.dev` CRDs
-**Repo:** `DuncanDoyle/kgw-argocd-demo` (to be created, public)
+**Repo:** [`DuncanDoyle/kgateway-argocd-demo`](https://github.com/DuncanDoyle/kgateway-argocd-demo) (public). Push over SSH; `REPO_URL` for ArgoCD is the HTTPS form, since ArgoCD pulls anonymously and holds no key.
 
 ## Purpose
 
@@ -96,7 +96,7 @@ Target cluster: minikube primary, but no minikube-specific assumptions. Gateway 
 ## Repository layout
 
 ```
-kgw-argocd-demo/
+kgateway-argocd-demo/
 ├── README.md
 ├── env.sh                    # REPO_URL, REPO_REVISION, chart/kgateway versions.
 │                             # The ONLY place to change when Gitea is swapped in.
@@ -328,5 +328,5 @@ Either way this is not evidence of a `Backend` status gap — an earlier draft o
 
 ## Resolved questions
 
-- **Repo location on disk.** The demo repo lives at `~/Development/github/kgw-argocd-demo`, alongside the other demo repos. The design doc moves with it.
+- **Repo location on disk.** The demo repo lives at `~/Development/github/kgateway-argocd-demo`, alongside the other demo repos. The design doc moves with it.
 - **Gateway health on plain minikube — not an issue.** `Programmed` defaults to `True` unless translation explicitly sets it False (`pkg/reports/status.go:630`); the only False paths are listener/filter-chain validation errors and misuse of `spec.addresses`, and `AddressNotAssigned` appears nowhere in kgateway. The LoadBalancer address populates `status.addresses` only (`pkg/kgateway/controller/gw_controller.go:390-410`), and ArgoCD's built-in Gateway check reads only `ResolvedRefs`, `Accepted` and `Programmed` — never `addresses`. The Gateway therefore reports Healthy on plain minikube with the Service pending; `minikube tunnel` affects reachability, not status.
