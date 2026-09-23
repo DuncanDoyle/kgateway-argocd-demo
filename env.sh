@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Single source of truth for every external version and identifier.
+# Swapping the git source (e.g. to an in-cluster Gitea) means changing
+# REPO_URL/REPO_REVISION here and nothing else.
+
+# --- git source ArgoCD pulls manifests from -------------------------------
+export REPO_URL="https://github.com/DuncanDoyle/kgw-argocd-demo.git"
+export REPO_REVISION="HEAD"
+
+# --- pinned external artifacts --------------------------------------------
+# Gateway API CRDs. kgateway 2.4.x is built against v1.6.1; no kgateway
+# chart bundles these, so they must be applied first.
+export GWAPI_VERSION="v1.6.1"
+export GWAPI_MANIFEST="https://github.com/kubernetes-sigs/gateway-api/releases/download/${GWAPI_VERSION}/standard-install.yaml"
+
+export KGATEWAY_VERSION="v2.4.5"
+export KGATEWAY_CRDS_CHART="oci://cr.kgateway.dev/kgateway-dev/charts/kgateway-crds"
+export KGATEWAY_CHART="oci://cr.kgateway.dev/kgateway-dev/charts/kgateway"
+
+export ARGOCD_CHART_REPO="https://argoproj.github.io/argo-helm"
+export ARGOCD_CHART_VERSION="10.9.2"
+
+# Pinned by digest: fixtures must be reproducible byte-for-byte.
+export HTTPBIN_IMAGE="docker.io/mccutchen/go-httpbin:v2.9.2@sha256:8b27c0fcea0d386992f26d33c0eaadf1709e759f9d3e8b6622d276d10d0569fe"
+
+# --- namespaces ------------------------------------------------------------
+export KGATEWAY_NS="kgateway-system"
+export ARGOCD_NS="argocd"
+export DEMO_NS="httpbin"
+export SCENARIOS_NS="scenarios"
