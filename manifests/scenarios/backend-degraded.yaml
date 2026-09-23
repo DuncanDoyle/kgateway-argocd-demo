@@ -1,0 +1,22 @@
+# NOTE: the brief's draft used `priorityGroups[].backends[].name`, but the
+# installed Backend CRD (kgateway v2.4.5) has no `backends` field —
+# the actual field is `backendRefs`, and it is required with minItems 1.
+# `backends` would have been silently pruned by CRD schema pruning, leaving
+# `priorityGroups[0]` with no `backendRefs` at all, which fails the CRD's
+# required-field validation and gets the whole resource rejected at
+# admission (Step 7's gate: structurally wrong, not semantically wrong).
+# Fixed to `backendRefs` below; the semantic intent (reference a Backend
+# name that does not exist, "no-such-backend") is unchanged.
+#
+# Priority group referencing a Backend that does not exist. Schema-valid
+# (the ref is just a name), so it passes admission; fails at translation.
+# Expected: Accepted=False / Reason=Invalid -> Degraded.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  name: backend-degraded
+  namespace: scenarios
+spec:
+  priorityGroups:
+  - backendRefs:
+    - name: no-such-backend

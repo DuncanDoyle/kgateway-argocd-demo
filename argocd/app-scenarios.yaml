@@ -1,0 +1,22 @@
+# Manual sync only: the demo starts all-green and failure states are summoned
+# on demand. With both apps synced, Task 5 captures every state in one pass.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kgw-scenarios
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    # Tokens substituted by sed at apply time from env.sh, same as app-demo.yaml.
+    repoURL: ${REPO_URL}
+    targetRevision: ${REPO_REVISION}
+    path: manifests/scenarios
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: scenarios
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true

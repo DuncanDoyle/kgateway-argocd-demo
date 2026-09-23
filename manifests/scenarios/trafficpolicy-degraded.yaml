@@ -1,0 +1,33 @@
+# FALLBACK VARIANT — see SCENARIOS.md for why.
+#
+# The brief's original design (HTTPRoute in namespace `scenarios` with a
+# cross-namespace parentRef to `demo-gateway` in `httpbin`) was probed
+# directly against the live cluster before writing this file:
+#   - The Gateway's listener sets allowedRoutes.namespaces.from: Same, so the
+#     cross-namespace HTTPRoute is rejected by the Gateway
+#     (status.parents[0].conditions: Accepted=False, reason=NotAllowedByListeners).
+#   - Independently of that, the TrafficPolicy CRD's targetRefs schema has NO
+#     namespace field on the target entry (group/kind/name/sectionName only),
+#     and its description states "The object must be in the same namespace
+#     as the policy." So a TrafficPolicy in `scenarios` can never target an
+#     HTTPRoute in `httpbin` at all, regardless of the Gateway's
+#     allowedRoutes setting or any ReferenceGrant.
+#
+# Fallback: tp-degraded is co-located in namespace `httpbin` (NOT
+# `scenarios`, despite this file living under manifests/scenarios/) and
+# targets the existing httpbin-via-service HTTPRoute from Task 3. It still
+# references a non-existent GatewayExtension, so the degraded mechanism
+# under test (extAuth.extensionRef -> missing extension) is unchanged.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  name: tp-degraded
+  namespace: httpbin
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: httpbin-via-service
+  extAuth:
+    extensionRef:
+      name: no-such-gateway-extension

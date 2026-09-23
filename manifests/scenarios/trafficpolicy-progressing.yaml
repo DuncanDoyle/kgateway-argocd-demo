@@ -1,0 +1,19 @@
+# Targets an HTTPRoute that does not exist. Translation never encounters the
+# ancestor, so no ancestor entry is written and status.ancestors stays empty.
+# Expected: Progressing (a health check must not read "no ancestors" as
+# healthy).
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  name: tp-progressing
+  namespace: scenarios
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: no-such-route
+  headerModifiers:
+    request:
+      set:
+      - name: X-Never-Applied
+        value: "true"
