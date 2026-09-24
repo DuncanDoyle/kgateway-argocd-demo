@@ -1,3 +1,8 @@
+# Real capture (kubectl get -o yaml) from a live kgateway v2.4.5 cluster.
+# generation:7 is a leftover artifact of the Pending-reason watch probe, which
+# patched this resource repeatedly to force reconciliations -- not hand-edited.
+# observedGeneration matches it, so the status is a current verdict, and the
+# spec below is exactly what the repo's manifest declares.
 apiVersion: gateway.kgateway.dev/v1alpha1
 kind: TrafficPolicy
 metadata:
