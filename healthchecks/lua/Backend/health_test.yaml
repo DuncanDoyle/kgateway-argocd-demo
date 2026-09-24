@@ -1,0 +1,13 @@
+tests:
+- healthStatus:
+    status: Healthy
+    message: Backend accepted
+  inputPath: testdata/healthy.yaml
+- healthStatus:
+    status: Degraded
+    message: 'Backend error: "priority group 0: backend "no-such-backend" not found in namespace "scenarios""'
+  inputPath: testdata/degraded.yaml
+- healthStatus:
+    status: Progressing
+    message: "Waiting for Backend status"
+  inputPath: testdata/stale.yaml
