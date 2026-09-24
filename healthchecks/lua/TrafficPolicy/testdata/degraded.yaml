@@ -1,0 +1,35 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  generation: 7
+  name: tp-degraded
+  namespace: httpbin
+spec:
+  extAuth:
+    extensionRef:
+      name: no-such-gateway-extension
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httpbin-via-service
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: demo-gateway
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-09-24T09:08:38Z"
+          message: 'extauth: httpbin/no-such-gateway-extension: gateway extension not found'
+          observedGeneration: 7
+          reason: Invalid
+          status: "False"
+          type: Accepted
+        - lastTransitionTime: "2026-09-24T09:08:38Z"
+          message: ""
+          observedGeneration: 7
+          reason: Pending
+          status: "False"
+          type: Attached
+      controllerName: kgateway.dev/kgateway

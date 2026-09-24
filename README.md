@@ -40,9 +40,15 @@ into its pod template.
 
 ## Verifying the health checks
 
-The real gate is argo-cd's own test harness, not the badges in the UI.
+The real gate is argo-cd's own test harness, not the badges in the UI. All
+11 testdata fixtures are tracked in this repo under
+`healthchecks/lua/{Backend,TrafficPolicy}/testdata/` — 5 are live captures,
+6 are derived/asserted (see each file's header comment, and
+`hack/extract-testdata.sh`'s own comments, for which is which).
 
 ```bash
+./setup.sh                      # needed: extract-testdata.sh refreshes
+                                 # the 5 captured fixtures from this cluster
 ./hack/extract-testdata.sh
 cp -r out/resource_customizations/gateway.kgateway.dev \
       <path-to-argo-cd-clone>/resource_customizations/
@@ -51,9 +57,10 @@ go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'
 ```
 
 Verified against argo-cd `1db740c1fa7854052c554742d4d6baaa2663c952`
-(`upstream/master`, 2026-09-24). All 11 fixtures pass; the full
+(`upstream/master`, 2026-09-24) — 11/11 fixtures pass; the full
 `go test -v ./util/lua/` suite also passes on this base, so the added
-checks don't regress anything else in the harness.
+checks don't regress anything else in the harness. Re-verified 2026-09-24
+following the exact steps above from a fresh clone of this repo.
 
 ## Using the checks before they ship upstream
 

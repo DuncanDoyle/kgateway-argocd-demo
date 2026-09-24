@@ -1,0 +1,25 @@
+# Real capture (kubectl get -o yaml), taken mid-probe while forcing
+# reconciliations to observe generation/observedGeneration skew -- the
+# `probe: "10"` label is a leftover artifact of that patch loop, not
+# hand-authored. generation:2 vs. observedGeneration:1 below is genuine.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  generation: 2
+  labels:
+    probe: "10"
+  name: httpbin-static
+  namespace: httpbin
+spec:
+  static:
+    hosts:
+      - host: httpbin.httpbin.svc.cluster.local
+        port: 8001
+status:
+  conditions:
+    - lastTransitionTime: "2026-09-23T17:20:09Z"
+      message: Backend accepted
+      observedGeneration: 1
+      reason: Accepted
+      status: "True"
+      type: Accepted

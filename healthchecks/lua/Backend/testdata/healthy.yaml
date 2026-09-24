@@ -1,0 +1,19 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  generation: 21
+  name: httpbin-static
+  namespace: httpbin
+spec:
+  static:
+    hosts:
+      - host: httpbin.httpbin.svc.cluster.local
+        port: 8000
+status:
+  conditions:
+    - lastTransitionTime: "2026-09-23T17:20:09Z"
+      message: Backend accepted
+      observedGeneration: 21
+      reason: Accepted
+      status: "True"
+      type: Accepted

@@ -1,0 +1,16 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  generation: 1
+  name: tp-progressing
+  namespace: scenarios
+spec:
+  headerModifiers:
+    request:
+      set:
+        - name: X-Never-Applied
+          value: "true"
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: no-such-route

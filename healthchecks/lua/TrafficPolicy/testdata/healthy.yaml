@@ -1,0 +1,37 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  generation: 1
+  name: add-demo-header
+  namespace: httpbin
+spec:
+  headerModifiers:
+    request:
+      set:
+        - name: X-Kgateway-Demo
+          value: hello-from-trafficpolicy
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httpbin-via-service
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: demo-gateway
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-09-23T17:20:17Z"
+          message: Policy accepted
+          observedGeneration: 1
+          reason: Valid
+          status: "True"
+          type: Accepted
+        - lastTransitionTime: "2026-09-23T17:20:18Z"
+          message: Attached to all targets
+          observedGeneration: 1
+          reason: Attached
+          status: "True"
+          type: Attached
+      controllerName: kgateway.dev/kgateway

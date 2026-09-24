@@ -1,0 +1,43 @@
+# Derived from healthy.yaml: Attached=False/Overridden -- policy exists but is not in effect.
+#
+# Reason and message text are ASSERTED, not observed -- kgateway's real
+# output for this state was not captured (needs two competing policies
+# attached to the same target, one overriding the other). Structure is
+# from a real cluster dump (healthy.yaml).
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  generation: 1
+  name: add-demo-header
+  namespace: httpbin
+spec:
+  headerModifiers:
+    request:
+      set:
+      - name: X-Kgateway-Demo
+        value: hello-from-trafficpolicy
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: httpbin-via-service
+status:
+  ancestors:
+  - ancestorRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: demo-gateway
+      namespace: httpbin
+    conditions:
+    - lastTransitionTime: '2026-09-23T17:20:17Z'
+      message: Policy accepted
+      observedGeneration: 1
+      reason: Valid
+      status: 'True'
+      type: Accepted
+    - lastTransitionTime: '2026-09-23T17:20:18Z'
+      message: Policy is overridden by a more specific policy
+      observedGeneration: 1
+      reason: Overridden
+      status: 'False'
+      type: Attached
+    controllerName: kgateway.dev/kgateway

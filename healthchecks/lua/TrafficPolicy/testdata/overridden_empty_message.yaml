@@ -1,0 +1,49 @@
+# Derived from healthy.yaml: Attached=False/Overridden with an empty message.
+#
+# The empty message is REAL kgateway output, observed on the Attached
+# condition in degraded.yaml (Attached/Pending, message: ""). The
+# Overridden reason is ASSERTED -- kgateway's real output for that state
+# was not captured (needs two competing policies attached to the same
+# target, one overriding the other).
+#
+# Purpose: exercises messageOrFallback on the DEGRADED_REASON branch --
+# proves the empty-message guard actually fires, since degraded.yaml's
+# empty message sits on a Pending condition that short-circuits before
+# the message is ever read.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  generation: 1
+  name: add-demo-header
+  namespace: httpbin
+spec:
+  headerModifiers:
+    request:
+      set:
+      - name: X-Kgateway-Demo
+        value: hello-from-trafficpolicy
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: httpbin-via-service
+status:
+  ancestors:
+  - ancestorRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: demo-gateway
+      namespace: httpbin
+    conditions:
+    - lastTransitionTime: '2026-09-23T17:20:17Z'
+      message: Policy accepted
+      observedGeneration: 1
+      reason: Valid
+      status: 'True'
+      type: Accepted
+    - lastTransitionTime: '2026-09-23T17:20:18Z'
+      message: ''
+      observedGeneration: 1
+      reason: Overridden
+      status: 'False'
+      type: Attached
+    controllerName: kgateway.dev/kgateway

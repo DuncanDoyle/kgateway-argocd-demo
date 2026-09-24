@@ -1,0 +1,18 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  generation: 1
+  name: backend-degraded
+  namespace: scenarios
+spec:
+  priorityGroups:
+    - backendRefs:
+        - name: no-such-backend
+status:
+  conditions:
+    - lastTransitionTime: "2026-09-23T17:26:52Z"
+      message: 'Backend error: "priority group 0: backend "no-such-backend" not found in namespace "scenarios""'
+      observedGeneration: 1
+      reason: Invalid
+      status: "False"
+      type: Accepted
