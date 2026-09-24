@@ -52,11 +52,15 @@ local function isStale(obj, condition)
 end
 
 -- kgateway has been observed writing message: "" on some conditions (see
--- testdata/degraded.yaml's Attached condition). In Lua the empty string is
--- truthy, so `condition.message or fallback` would still pick "" and the
--- health badge would render blank. Skip empty messages explicitly and fall
--- back to a synthesized description instead. Same approach as Backend's
--- health.lua.
+-- testdata/degraded.yaml's Attached/Pending condition). In Lua the empty
+-- string is truthy, so `condition.message or fallback` would still pick ""
+-- and the health badge would render blank. Skip empty messages explicitly
+-- and fall back to a synthesized description instead. The guard itself is
+-- exercised by testdata/overridden_empty_message.yaml, which relocates that
+-- same real empty message onto a DEGRADED_REASON branch where it is
+-- actually read (degraded.yaml's own empty message sits on a Pending
+-- condition, which short-circuits before condition.message is ever
+-- consulted). Same approach as Backend's health.lua.
 local function messageOrFallback(condition, fallback)
   if condition.message ~= nil and condition.message ~= "" then
     return condition.message

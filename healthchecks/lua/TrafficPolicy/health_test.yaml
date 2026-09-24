@@ -25,3 +25,14 @@ tests:
     status: Degraded
     message: "Policy was partially accepted"
   inputPath: testdata/partially_valid.yaml
+# Real empty message (observed on degraded.yaml's Attached/Pending condition)
+# relocated onto a DEGRADED_REASON branch, so the fallback text is actually
+# read rather than short-circuited by the Pending check.
+- healthStatus:
+    status: Degraded
+    message: "Attached: Overridden"
+  inputPath: testdata/overridden_empty_message.yaml
+- healthStatus:
+    status: Progressing
+    message: "Waiting for TrafficPolicy status"
+  inputPath: testdata/stale.yaml
