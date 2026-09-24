@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Removes everything setup.sh created, in reverse order. CRDs last, because
 # deleting them first strands finalizers on the CRs.
+#
+# NOT fully true for ArgoCD's own CRDs (applications.argoproj.io and
+# siblings): the argo-helm chart annotates them helm.sh/resource-policy:
+# keep, so `helm uninstall argo-cd` intentionally leaves them installed.
+# Verified live -- they survive this script. Delete them manually for a
+# fully clean cluster: `kubectl delete crd -l app.kubernetes.io/part-of=argocd`.
 set -euo pipefail
 
 cd "$(dirname "$0")"

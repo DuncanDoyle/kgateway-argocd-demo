@@ -24,6 +24,13 @@ export ARGOCD_CHART_REPO="https://argoproj.github.io/argo-helm"
 export ARGOCD_CHART_VERSION="10.9.2"
 
 # Pinned by digest: fixtures must be reproducible byte-for-byte.
+#
+# Documentation-only: nothing sources this variable. manifests/demo/httpbin.yaml
+# hardcodes the same image+digest directly on the container spec (Kubernetes
+# manifests don't do shell expansion, so it can't reference env.sh at apply
+# time). Keeping it here anyway because env.sh is this repo's declared single
+# source of truth for versions -- if you bump the digest, update both this
+# line and the manifest, and keep them equal.
 export HTTPBIN_IMAGE="docker.io/mccutchen/go-httpbin:v2.9.2@sha256:8b27c0fcea0d386992f26d33c0eaadf1709e759f9d3e8b6622d276d10d0569fe"
 
 # --- namespaces ------------------------------------------------------------

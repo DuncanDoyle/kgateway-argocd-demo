@@ -28,10 +28,13 @@ local function isStale(obj, condition)
   return condition.observedGeneration ~= obj.metadata.generation
 end
 
--- kgateway has been observed writing message: "" on some conditions. In Lua
--- the empty string is truthy, so `condition.message or fallback` would still
--- pick "" and the health badge would render blank. Skip empty messages
--- explicitly and fall back to a synthesized description instead.
+-- kgateway has been observed writing message: "" on policy conditions (see
+-- TrafficPolicy's Attached/Pending condition in ../TrafficPolicy/health.lua)
+-- -- not observed on Backend specifically, but the same writer code paths
+-- are plausibly shared, and the guard costs nothing to keep here too. In
+-- Lua the empty string is truthy, so `condition.message or fallback` would
+-- still pick "" and the health badge would render blank. Skip empty
+-- messages explicitly and fall back to a synthesized description instead.
 local function messageOrFallback(condition, fallback)
   if condition.message ~= nil and condition.message ~= "" then
     return condition.message
