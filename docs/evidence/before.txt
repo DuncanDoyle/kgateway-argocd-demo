@@ -1,0 +1,7 @@
+### kgw-demo
+Backend/httpbin-static (httpbin) -> 
+TrafficPolicy/add-demo-header (httpbin) -> 
+### kgw-scenarios
+Backend/backend-degraded (scenarios) -> 
+TrafficPolicy/tp-degraded (httpbin) -> 
+TrafficPolicy/tp-progressing (scenarios) -> 
