@@ -115,9 +115,9 @@ warns about. Fixed to `backendRefs`; the semantic intent (reference a
 | `Backend/backend-degraded` | priority group → non-existent Backend | `Accepted=False/Invalid` → Degraded | **Confirmed.** `status.conditions[0]`: `Accepted=False/reason=Invalid`, message `'Backend error: "priority group 0: backend "no-such-backend" not found in namespace "scenarios""'`. |
 
 Complete status YAML for all three, captured via `kubectl get -o yaml`, is
-in `out/probe/`:
-`trafficpolicy-tp-progressing.yaml`, `trafficpolicy-tp-degraded.yaml`,
-`backend-backend-degraded.yaml`.
+inlined below (not linked to a path — the original `out/probe/` scratch
+captures were never tracked and `out/` is gitignored by design; see
+`docs/evidence/` for other committed captures).
 
 ### `TrafficPolicy/tp-degraded` full status
 
@@ -172,9 +172,15 @@ The brief's open question: is `Accepted=False/Reason=Pending` ever
 observable? Ran the watch (`kubectl -n httpbin get trafficpolicy -o yaml
 --watch`, adjusted from `scenarios` to `httpbin` since `tp-degraded` lives
 there — see Deviation 1) while patching `tp-degraded`'s spec 5 times over 5
-seconds to force re-reconciliation. Full watch stream: `out/probe/tp-watch.yaml`.
+seconds to force re-reconciliation. The original capture lived only in
+`out/probe/` (gitignored, never tracked) — re-run live against the same
+cluster on 2026-09-24 to produce a committed excerpt:
+[`docs/evidence/tp-watch-pending-probe.txt`](docs/evidence/tp-watch-pending-probe.txt).
 
-**`reason: Pending` count: 11 occurrences. All 11 are on `type: Attached`,
+**`reason: Pending` count: 13 occurrences in the re-run (watch-event count
+varies run to run — each patch can surface more than one update event; the
+original run counted 11 across the same 1 initial + 5 forced
+reconciliations). All occurrences, in both runs, are on `type: Attached`;
 zero are on `type: Accepted`.**
 
 So, precisely answering the brief's question as posed —
@@ -195,11 +201,19 @@ expect to find `Pending` on `Accepted` for TrafficPolicy — this probe found
 zero instances of that combination across 6 reconciliation events (1
 initial + 5 forced). If the Lua script has a defensive branch for
 `Accepted=False/Reason=Pending`, this probe gives no evidence it is
-reachable and **no fixture should be fabricated to exercise it**. But the
-script does need to handle `Attached=False/Reason=Pending` correctly (as
-Degraded, since it co-occurs with `Accepted=False`, not as some neutral/
-in-progress state) — that combination is not rare, it is the steady state
-of a policy whose extension reference never resolves.
+reachable and **no fixture should be fabricated to exercise it**.
+
+`Attached=False/Reason=Pending` is not rare, though — it's the steady state
+of a policy whose extension reference never resolves, so the script must
+still handle it correctly. The shipped script treats `Pending` as
+**Progressing** on whichever condition carries it, matching the reason's own
+"seen, not yet decided" semantics — it does not special-case
+`Attached=False/Pending` as Degraded. That is still the right overall
+verdict for `tp-degraded`: with precedence Degraded > Progressing > Healthy,
+the co-occurring `Accepted=False/Invalid` condition independently produces
+Degraded, and Degraded wins regardless of what `Attached` says. Mapping
+`Pending` itself to Degraded would be wrong in general — it would false-alarm
+on a policy that is genuinely mid-attachment with no failure at all.
 
 ## ArgoCD's own health assessment (context for Task 7)
 

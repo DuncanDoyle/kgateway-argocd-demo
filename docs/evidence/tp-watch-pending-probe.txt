@@ -1,0 +1,88 @@
+Regenerated evidence for SCENARIOS.md's "Accepted=False/Reason=Pending probe"
+(2026-09-24, during the whole-branch fix wave — the original out/probe/
+capture was never tracked and out/ is gitignored, so this replaces it with a
+committed, trimmed excerpt).
+
+Command run against the live kgw-argocd minikube cluster:
+
+  kubectl -n httpbin get trafficpolicy tp-degraded -o yaml --watch > tp-watch.yaml   # backgrounded
+  for i in 1 2 3 4 5; do
+    kubectl -n httpbin patch trafficpolicy tp-degraded --type merge \
+      -p "{\"spec\":{\"headerModifiers\":{\"request\":{\"set\":[{\"name\":\"X-Probe\",\"value\":\"$i\"}]}}}}"
+    sleep 1
+  done
+  # then: kubectl -n httpbin patch trafficpolicy tp-degraded --type json \
+  #         -p '[{"op":"remove","path":"/spec/headerModifiers"}]'
+  # to restore tp-degraded's spec to match manifests/scenarios/trafficpolicy-degraded.yaml
+  # exactly (verified byte-for-byte afterward; no probe residue left live).
+
+The full watch stream is 13 update events (621 lines of near-duplicate
+objects — 1 initial + roughly 2 per patch, since a spec merge-patch and the
+controller's own status write each surface as a separate watch event). Not
+committed in full as noise; every event's relevant condition pair, extracted
+with PyYAML, is:
+
+  #   generation   Accepted            Attached
+  1   1            False/Invalid       False/Pending
+  2   2            False/Invalid       False/Pending
+  3   2            False/Invalid       False/Pending
+  4   3            False/Invalid       False/Pending
+  5   3            False/Invalid       False/Pending
+  6   4            False/Invalid       False/Pending
+  7   4            False/Invalid       False/Pending
+  8   5            False/Invalid       False/Pending
+  9   5            False/Invalid       False/Pending
+  10  6            False/Invalid       False/Pending
+  11  6            False/Invalid       False/Pending
+  12  7            False/Invalid       False/Pending
+  13  7            False/Invalid       False/Pending
+
+Result: 13/13 events carry `Attached=False/Reason=Pending`; 0/13 carry
+`Reason=Pending` on `Accepted` — `Accepted` stayed `False/Invalid` for the
+entire probe. This matches the original probe's finding (previously
+reported as 11 occurrences across 1 initial + 5 forced reconciliations; this
+re-run's exact event count differs slightly — 13 vs. 11 — because each patch
+can surface as more than one watch event, which is expected watch-stream
+behavior, not a different underlying result). The conclusion is unchanged:
+`Accepted=False/Reason=Pending` was not observed; `Attached=False/
+Reason=Pending` is the steady state of a policy whose extension reference
+never resolves.
+
+One representative full event (the first, generation=1) for shape reference:
+
+  apiVersion: gateway.kgateway.dev/v1alpha1
+  kind: TrafficPolicy
+  metadata:
+    generation: 1
+    name: tp-degraded
+    namespace: httpbin
+  spec:
+    extAuth:
+      extensionRef:
+        name: no-such-gateway-extension
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httpbin-via-service
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: demo-gateway
+        namespace: httpbin
+      conditions:
+      - lastTransitionTime: "2026-09-24T09:08:38Z"
+        message: 'extauth: httpbin/no-such-gateway-extension: gateway extension not
+          found'
+        observedGeneration: 1
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: "2026-09-24T09:08:38Z"
+        message: ""
+        observedGeneration: 1
+        reason: Pending
+        status: "False"
+        type: Attached
+      controllerName: kgateway.dev/kgateway
