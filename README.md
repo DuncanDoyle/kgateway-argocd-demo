@@ -38,6 +38,33 @@ setting, add it and re-run `helm upgrade` — the application-controller
 restarts automatically since the chart checksums `argocd-cmd-params-cm`
 into its pod template.
 
+## Verifying the health checks
+
+The real gate is argo-cd's own test harness, not the badges in the UI.
+
+```bash
+./hack/extract-testdata.sh
+cp -r out/resource_customizations/gateway.kgateway.dev \
+      <path-to-argo-cd-clone>/resource_customizations/
+cd <path-to-argo-cd-clone>
+go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'
+```
+
+Verified against argo-cd `1db740c1fa7854052c554742d4d6baaa2663c952`
+(`upstream/master`, 2026-09-24). All 11 fixtures pass; the full
+`go test -v ./util/lua/` suite also passes on this base, so the added
+checks don't regress anything else in the harness.
+
+## Using the checks before they ship upstream
+
+`argocd-cm` entries override bundled checks, so this works on any ArgoCD
+version — and remains a valid override afterwards:
+
+```bash
+kubectl -n argocd patch configmap argocd-cm \
+  --patch-file healthchecks/argocd-cm-patch.yaml
+```
+
 ## Teardown
 
 ```bash
