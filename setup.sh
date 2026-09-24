@@ -34,12 +34,22 @@ helm upgrade --install argo-cd argo-cd \
 configs:
   params:
     server.insecure: true
+    # ArgoCD defaults to resourceHealthSource: appTree, which never persists
+    # per-resource health onto Application.status.resources[].health — only
+    # the API/UI's in-memory resource tree gets it. The UI shows health
+    # either way, but that default leaves every kubectl-based verification
+    # of this demo (get application ... jsonpath '...health.status...')
+    # empty regardless of whether the health checks actually work, which is
+    # indistinguishable from them being broken. This setting persists health
+    # onto the Application resource so that path is observable.
+    controller.resource.health.persist: "true"
   cm:
     # Short reconciliation so health-check edits surface in seconds while
     # iterating on the Lua.
     timeout.reconciliation: 10s
 EOF
 kubectl -n "${ARGOCD_NS}" rollout status deploy/argo-cd-argocd-server --timeout=300s
+kubectl -n "${ARGOCD_NS}" rollout status statefulset/argo-cd-argocd-application-controller --timeout=300s
 
 echo
 echo "Setup complete."

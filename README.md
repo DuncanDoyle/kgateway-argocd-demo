@@ -26,6 +26,18 @@ that into `resource_customizations/` fixtures for an upstream PR.
 
 Then follow [DEMO.md](DEMO.md).
 
+## Verifying health via CLI
+
+`setup.sh` sets `controller.resource.health.persist: "true"` on the ArgoCD
+Helm release. Without it, ArgoCD's default (`resourceHealthSource: appTree`)
+never writes per-resource health onto `Application.status.resources[]` — the
+UI still shows badges correctly, but `kubectl get application ... jsonpath
+'...health.status...'` returns nothing whether or not the health checks
+work. If you're pointing this demo at an ArgoCD install that predates this
+setting, add it and re-run `helm upgrade` — the application-controller
+restarts automatically since the chart checksums `argocd-cmd-params-cm`
+into its pod template.
+
 ## Teardown
 
 ```bash
