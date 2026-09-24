@@ -2,7 +2,9 @@
 
 ```bash
 ./setup.sh
-kubectl apply -f argocd/app-demo.yaml
+source ./env.sh && sed -e "s|\${REPO_URL}|${REPO_URL}|g" \
+  -e "s|\${REPO_REVISION}|${REPO_REVISION}|g" \
+  argocd/app-demo.yaml | kubectl apply -f -
 ```
 
 Open the ArgoCD UI:
