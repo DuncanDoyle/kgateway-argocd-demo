@@ -1,0 +1,27 @@
+tests:
+- healthStatus:
+    status: Healthy
+    message: Policy accepted
+  inputPath: testdata/healthy.yaml
+- healthStatus:
+    status: Degraded
+    message: 'extauth: httpbin/no-such-gateway-extension: gateway extension not found'
+  inputPath: testdata/degraded.yaml
+- healthStatus:
+    status: Progressing
+    message: "Waiting for TrafficPolicy status"
+  inputPath: testdata/progressing.yaml
+# The foreign ancestor is Invalid but owned by another controller, so the
+# result must be identical to healthy.yaml.
+- healthStatus:
+    status: Healthy
+    message: Policy accepted
+  inputPath: testdata/foreign_controller.yaml
+- healthStatus:
+    status: Degraded
+    message: "Policy is overridden by a more specific policy"
+  inputPath: testdata/overridden.yaml
+- healthStatus:
+    status: Degraded
+    message: "Policy was partially accepted"
+  inputPath: testdata/partially_valid.yaml
