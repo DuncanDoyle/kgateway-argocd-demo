@@ -1,3 +1,7 @@
 # Extraction output — regenerated from a live cluster, never committed as
 # the source of truth. Copied into the argo-cd clone for the upstream PR.
 out/
+
+# SDD coordination workspace — ledger, task briefs, reports, review packages.
+# Process exhaust, not part of the deliverable.
+.superpowers/

@@ -201,6 +201,7 @@ Namespace `scenarios`, synced on demand.
 |---|---|---|
 | `trafficpolicy-progressing` | `targetRefs` → an HTTPRoute that does not exist | no ancestors, or an ancestor with `Accepted=False/Pending` → `Progressing` either way |
 | `trafficpolicy-degraded` | attached to a real route, `extAuth.extensionRef` → non-existent GatewayExtension | `Accepted=False/Invalid` → `Degraded` |
+
 | `backend-degraded` | `priorityGroups` referencing a Backend that does not exist | `Accepted=False/Invalid` → `Degraded` |
 | `backend-stale` | `observedGeneration` mismatch, captured by watch if possible | `Progressing` (generation gating) |
 
@@ -215,13 +216,22 @@ kind: Backend
 metadata: { name: backend-degraded, namespace: scenarios }
 spec:
   priorityGroups:
-  - backends:
+  - backendRefs:              # NOT `backends` — verified against v2.4.5 PriorityGroup
     - name: no-such-backend
 ```
 
 Error path: `pkg/kgateway/extensions2/plugins/backend/priority_groups.go:62`, aggregated into the `Accepted` condition by `pkg/kgateway/extensions2/pluginutils/status.go:14`. `priorityGroups` confirmed present in the v2.4.5 CRD.
 
 Note: `priorityGroups` is marked experimental in the API and may change shape between kgateway versions. That is a maintenance cost on the demo manifest only — the resulting status is an ordinary `Accepted=False/Invalid` condition identical to any other Backend error, so the Lua and the upstream fixture are unaffected. **Fallback if the probe shows otherwise:** an AWS backend with a missing `auth.secretRef` (`plugin.go:284`), at the cost of dragging AWS concepts into an otherwise self-contained demo.
+
+### Correction from the probe (2026-09-23)
+
+Two API assumptions in the original draft were wrong, both found by running it:
+
+- **`PriorityGroup`'s field is `backendRefs`, not `backends`** (`api/v1alpha1/kgateway/backend_types.go`, v2.4.5). The wrong name fails CRD validation, so the resource is admission-rejected and never exists — the exact wrong failure mode this design warns about.
+- **A policy's `targetRefs` has no namespace field at all** — "object must be in the same namespace as the policy". Cross-namespace policy attachment is impossible by API design, not merely blocked by a Gateway's `allowedRoutes`. The broken TrafficPolicy therefore lives in the `httpbin` namespace beside its target, not in `scenarios`, which means the scenarios Application does not own it and the demo namespace is no longer purely healthy.
+
+Both corrections are a direct vindication of probe-first: each would have shipped as a broken fixture had the scenarios been written from source-reading alone.
 
 ### Probe-first
 

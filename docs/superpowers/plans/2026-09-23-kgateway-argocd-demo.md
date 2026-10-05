@@ -278,11 +278,17 @@ chmod +x setup.sh teardown.sh
 - [ ] **Step 4: Run setup against a clean cluster**
 
 ```bash
+# Driver and Kubernetes version match every other profile on this machine —
+# vfkit is the driver known to work here; letting minikube pick its default
+# risks a failed start for no benefit.
 minikube delete --profile kgw-argocd || true
-minikube start --profile kgw-argocd
+minikube start --profile kgw-argocd --driver=vfkit --kubernetes-version=v1.34.7
 kubectl config use-context kgw-argocd
 ./setup.sh
 ```
+
+> Note: this switches the active kubecontext away from whatever was previously
+> active. Reversible with `kubectl config use-context <previous>`.
 
 Expected: completes without error; the final banner prints `GatewayClass: kgateway`.
 
@@ -731,7 +737,7 @@ spec:
 ```yaml
 # Priority group referencing a Backend that does not exist. Schema-valid (the
 # ref is just a name), so it passes admission; fails at translation with
-#   priority group 0: backend "no-such-backend" not found in namespace "scenarios"
+#   priority group 0: backend "no-such-backend" not found in namespace "<ns>"
 # Expected: Accepted=False / Reason=Invalid -> Degraded.
 apiVersion: gateway.kgateway.dev/v1alpha1
 kind: Backend
@@ -740,7 +746,7 @@ metadata:
   namespace: scenarios
 spec:
   priorityGroups:
-  - backends:
+  - backendRefs:              # NOT `backends` — verified against v2.4.5 PriorityGroup
     - name: no-such-backend
 ```
 
@@ -1069,8 +1075,20 @@ cd ~/Development/github/argo-cd
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'
 ```
 
-Expected: FAIL — there is no `health.lua` yet, so the health status comes back
-empty and does not match.
+Expected: FAIL.
+
+**A bare missing `health.lua` does NOT produce a failing run.** `TestLuaHealthScript`
+only generates subtests for a directory that already contains `health.lua`, so a
+directory holding just `testdata/` and `health_test.yaml` yields "no tests to run"
+— a vacuous pass, not RED. To get a genuine failing run, drop in a stub first:
+
+```bash
+echo 'return {}' > ~/Development/github/argo-cd/resource_customizations/gateway.kgateway.dev/Backend/health.lua
+go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev/Backend'
+```
+
+That fails on every fixture because the returned health has no status. Keep the
+stub untracked — it is scaffolding, never committed.
 
 - [ ] **Step 4: Write the implementation**
 
@@ -1341,7 +1359,14 @@ cd ~/Development/github/argo-cd
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev/TrafficPolicy'
 ```
 
-Expected: FAIL — no `health.lua` for TrafficPolicy yet.
+Expected: FAIL. As in Task 6, a missing `health.lua` gives "no tests to run"
+rather than RED — the harness only creates subtests for directories that have one.
+Drop in an untracked stub to force a genuine failing run:
+
+```bash
+echo 'return {}' > ~/Development/github/argo-cd/resource_customizations/gateway.kgateway.dev/TrafficPolicy/health.lua
+go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev/TrafficPolicy'
+```
 
 - [ ] **Step 5: Write the implementation**
 
