@@ -5,6 +5,9 @@ fixtures for ArgoCD health checks covering `gateway.kgateway.dev` CRDs.
 
 Tracks [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
 
+For the programme view — phases, what ships to whom, and what is
+deliberately excluded — see [ROADMAP.md](ROADMAP.md).
+
 ## What this is for
 
 ArgoCD has no health checks for `gateway.kgateway.dev/*` resources, so they
