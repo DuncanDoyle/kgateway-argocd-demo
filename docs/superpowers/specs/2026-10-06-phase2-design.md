@@ -1,6 +1,8 @@
 # Phase 2 — remaining kgateway OSS CRDs — design
 
-**Status:** DRAFT, awaiting Duncan's approval. Nothing is implemented.
+**Status:** Section 1 presented; **Section 2 APPROVED** (2026-10-06); Sections 3-4
+drafted, Section 3 amended with Duncan's ruling on `GatewayExtension`. Nothing
+is implemented.
 **Date:** 2026-10-06
 **Programme context:** [ROADMAP.md](../../../ROADMAP.md)
 **Builds on:** [phase 1 design](2026-09-22-kgateway-argocd-demo-design.md)
@@ -138,7 +140,7 @@ below are **predictions, not observations**:
 | `BackendConfigPolicy` degraded | TLS config referencing a Secret that does not exist | medium |
 | `DirectResponse` healthy | referenced by an HTTPRoute `ExtensionRef` filter | medium — attachment is filter-based, not `targetRefs` |
 | `DirectResponse` degraded | referenced by nothing, or an invalid status code / body combination | **low** |
-| `GatewayExtension` healthy | `extAuth` pointing at the httpbin Service — translation is not expected to validate that the service speaks ext_authz | medium |
+| `GatewayExtension` healthy | `extAuth` pointing at the httpbin Service — translation is not expected to validate that the service speaks ext_authz | medium — and its condition vocabulary is the probe's first question |
 | `GatewayExtension` degraded | `extAuth` pointing at a Service that does not exist | medium |
 
 **Two things the probe must establish before any Lua is written:**
@@ -148,7 +150,19 @@ below are **predictions, not observations**:
    reasons. `GatewayExtensionStatus` declares no condition types of its own in
    the API, and I could not trace where its conditions are populated. If it uses
    a different vocabulary the shared `conditions` script does **not** work
-   unchanged, and that is a finding, not something to paper over.
+   unchanged.
+
+   **Decision (Duncan, 2026-10-06): if the vocabulary differs, add a third,
+   kind-specific script — do not drop `GatewayExtension` from phase 2.**
+
+   It would live at `healthchecks/lua/gatewayextension/health.lua`, carry a
+   header comment stating which condition types and reasons it recognises and
+   why it could not share the `conditions` script, and be covered by the same
+   drift test (trivially, as the only copy of itself). The cost is a third file
+   to maintain and one script outside the shared-logic guarantee; the benefit is
+   that users get working health for a kind they actually deploy. Scope grows by
+   roughly 80 lines of Lua and no extra fixtures — the two planned for
+   `GatewayExtension` serve it either way.
 2. **Whether the three new ancestors kinds really carry `Accepted` + `Attached`
    against a Gateway ancestor**, as `TrafficPolicy` does. `DirectResponse`'s
    printcolumns say yes for it; the other two are assumed.
