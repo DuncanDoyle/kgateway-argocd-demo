@@ -3,10 +3,36 @@
 Programme-level view of the work tracked by
 [kgateway-dev/kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
 Each phase gets its own design spec and implementation plan under
-[`docs/superpowers/`](docs/superpowers/); this page says what the phases are,
-what ships to whom, and in what order.
+[`docs/superpowers/`](docs/superpowers/); this page says what ships to whom,
+in what order, and as which product.
 
-**Last updated:** 2026-10-05
+**Last updated:** 2026-10-06
+
+## Two products, not one
+
+This work is delivered as **two independently supported products**:
+
+| | Product | Covers | Audience |
+|---|---|---|---|
+| **A** | kgateway ArgoCD support | `gateway.kgateway.dev` | kgateway OSS users — and SEFK customers, since SEFK ships these CRDs too |
+| **B** | Solo Enterprise for kgateway ArgoCD support | `enterprisekgateway.solo.io`, `enterprise.solo.io`, `waf.solo.io`, later `portal.solo.io` | SEFK customers |
+
+**B is an extension of A, not a superset.** It covers only the enterprise API
+groups and never restates A's kinds. A SEFK customer applies **both** packages:
+A for the kgateway CRDs their install ships, B for the enterprise ones. Each has
+its own version stream, support matrix and documentation.
+
+This works cleanly because `argocd-cm` keys are per group and kind
+(`resource.customizations.health.<group>_<Kind>`), so two patches merge into the
+one ConfigMap additively with no overlap.
+
+Two consequences worth holding on to:
+
+- **A must never reference B.** Product A's repo, docs and upstream PR are
+  public OSS artifacts; they must not name SEFK, link to internal repos, or
+  describe enterprise APIs.
+- **B's home is not this repo.** This repo is public and is product A. Where B
+  lives is an open decision (see below).
 
 ## The problem
 
@@ -35,12 +61,26 @@ different semantics. Customer-facing docs must say when it is safe to remove.
 
 ## Status
 
+### Product A — kgateway
+
 | Phase | Scope | State |
 |---|---|---|
-| 1 | `gateway.kgateway.dev`: `Backend`, `TrafficPolicy` | **Complete.** 11 cluster-captured fixtures, passing argo-cd's own harness, proven on a live cluster |
-| 2 | `gateway.kgateway.dev`: `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse`, `GatewayExtension` | [Design drafted](docs/superpowers/specs/2026-10-06-phase2-design.md) — awaiting approval |
-| 3 | `enterprisekgateway.solo.io`, `enterprise.solo.io`, `waf.solo.io` | Not designed |
-| 4 | `portal.solo.io` | Not designed |
+| A1 | `Backend`, `TrafficPolicy` | **Complete.** 11 cluster-captured fixtures, passing argo-cd's own harness, proven on a live cluster |
+| A2 | `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse`, `GatewayExtension` | [Design approved](docs/superpowers/specs/2026-10-06-phase2-design.md) 2026-10-06 — implementation plan next |
+
+A2 completes `gateway.kgateway.dev` coverage and closes #13871. Product A then
+ships as a documented ConfigMap package, followed by the upstream argo-cd PR.
+
+### Product B — Solo Enterprise for kgateway
+
+| Phase | Scope | State |
+|---|---|---|
+| B1 | `enterprisekgateway.solo.io`, `enterprise.solo.io`, `waf.solo.io` | Not designed |
+| B2 | `portal.solo.io` | Not designed |
+
+B1 cannot start until A2 is implemented — B extends A and should not be designed
+against a moving target — and needs a **licensed SEFK cluster** to capture
+fixtures.
 
 ### Currently supported
 
@@ -55,12 +95,12 @@ resource.customizations.health.gateway.kgateway.dev_TrafficPolicy
 |---|---|
 | `GatewayParameters` | No status implemented — the CRD schema says so outright. Any check would be a constant. Revisit if kgateway implements status. |
 | `HTTPListenerPolicy` | Deprecated in 2.4.x in favour of `ListenerPolicy.spec.httpSettings`, and already absent from `main`. A check would ship for a kind that disappears next minor. |
-| `ratelimit.solo.io/RateLimitConfig` | Empty status — same case as `GatewayParameters`. Confirm against a live SEFK cluster during phase 3. |
+| `ratelimit.solo.io/RateLimitConfig` | Empty status — same case as `GatewayParameters`. Confirm against a live SEFK cluster during B1. |
 | `extauth.solo.io/AuthConfig` | Empty status — as above. |
 
 ## Phases
 
-### Phase 2 — remaining kgateway OSS CRDs
+### A2 — remaining kgateway OSS CRDs
 
 Brings `gateway.kgateway.dev` coverage to six kinds and **closes #13871**.
 
@@ -75,9 +115,9 @@ Also in scope: refactoring phase 1's two scripts onto the shared form. That
 change is behaviour-preserving — the rendered messages are identical — so the
 existing 11 fixtures are its regression test.
 
-**Ships:** OSS ConfigMap package, then the upstream PR.
+**Ships:** product A's ConfigMap package, then the upstream PR. Completes product A's current scope.
 
-### Phase 3 — Solo Enterprise for kgateway
+### B1 — Solo Enterprise for kgateway
 
 `enterprisekgateway.solo.io` (TrafficPolicy, Parameters, DestinationSelector),
 `enterprise.solo.io` (EnterpriseListenerSet), `waf.solo.io` (WAFPolicy). Same
@@ -91,9 +131,9 @@ being commercial is no barrier (upstream already carries checks for
 `gateway.solo.io`/`gloo.solo.io`), but the ConfigMap may simply be the better
 vehicle for a product with its own release cadence.
 
-**Ships:** the customer package.
+**Ships:** product B's first release — the enterprise-groups package, applied alongside product A.
 
-### Phase 4 — Portal
+### B2 — Portal
 
 `portal.solo.io`: `Portal`, `ApiProduct`, `ApiDoc`, and possibly
 `PortalConfig`, `PortalParameters`, `VisibilityPolicy` (several have no status
@@ -111,10 +151,10 @@ Not yet written, and not yet in any phase's plan. The repo's current docs
 
 | Deliverable | Audience | When |
 |---|---|---|
-| OSS ConfigMap package — install, what each status means, how to remove once upstream ships | kgateway OSS users | end of phase 2 |
-| Customer package — as above plus SEFK-specific kinds and supported version matrix | SEFK customers | end of phase 3 |
+| Product A package docs — install, what each status means, how to remove once upstream ships | kgateway OSS users | end of A2 |
+| Product B package docs — enterprise kinds, supported SEFK version matrix, and that product A must be applied too | SEFK customers | end of B1 |
 | Upstream PR body + `#13871` closing comment | argo-cd maintainers, kgateway community | with the PR |
-| Product docs entry | docs.solo.io / kgateway.dev | after phase 3 — owner TBD |
+| Product docs entries — one per product | kgateway.dev (A), docs.solo.io (B) | after B1 — owner TBD |
 
 ## Method
 
@@ -134,7 +174,12 @@ caused every significant defect found so far:
 
 ## Open decisions
 
-- Exact timing of the upstream PR relative to the OSS ConfigMap release — the
-  PR is held at a local commit and folds in phase 2 before opening.
-- Whether phase 3's SEFK checks go upstream or stay ConfigMap-only.
-- Owner and location for the product-docs entry.
+- **Where product B lives.** This repo is public and is product A; B must not
+  ship from it. Candidates: a repo under `solo-io`, or a private repo of its
+  own. Needs deciding before B1's design.
+- Exact timing of the upstream PR relative to product A's ConfigMap release —
+  the PR is held at a local commit and folds in A2 before opening.
+- Whether product B's checks go upstream at all, or stay ConfigMap-only. Being
+  commercial is no barrier, but a product with its own release cadence may be
+  better served by the ConfigMap it controls.
+- Owner and location for the two product-docs entries.

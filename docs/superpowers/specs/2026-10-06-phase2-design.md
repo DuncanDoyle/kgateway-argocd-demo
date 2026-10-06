@@ -1,8 +1,7 @@
 # Phase 2 — remaining kgateway OSS CRDs — design
 
-**Status:** Section 1 presented; **Section 2 APPROVED** (2026-10-06); Sections 3-4
-drafted, Section 3 amended with Duncan's ruling on `GatewayExtension`. Nothing
-is implemented.
+**Status:** **APPROVED** (Sections 1-4, 2026-10-06). Implementation plan next;
+nothing is implemented yet.
 **Date:** 2026-10-06
 **Programme context:** [ROADMAP.md](../../../ROADMAP.md)
 **Builds on:** [phase 1 design](2026-09-22-kgateway-argocd-demo-design.md)
@@ -10,6 +9,13 @@ is implemented.
 Phase 1 shipped health checks for `Backend` and `TrafficPolicy`. Phase 2 brings
 `gateway.kgateway.dev` coverage to six kinds and closes
 [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
+
+This phase is **A2** — the second phase of **product A**, kgateway ArgoCD
+support, which is delivered and supported independently of product B (Solo
+Enterprise for kgateway ArgoCD support). A2 completes product A's current
+scope. B extends A with the enterprise API groups and never restates A's kinds;
+see [ROADMAP.md](../../../ROADMAP.md). Everything in this document is a public
+OSS artifact and must not reference SEFK.
 
 ---
 
@@ -211,14 +217,18 @@ unrecognised-reason fallback).
 The roadmap identifies this as a gap. Phase 2 ships **one** of the four doc
 deliverables:
 
-**OSS ConfigMap package** — for a kgateway user who wants health checks today.
+**Product A's ConfigMap package** — for a kgateway user who wants health checks
+today. This is product A's package and covers `gateway.kgateway.dev` only; a
+SEFK customer additionally applies product B's package, which is out of scope
+here and must not be mentioned in any public artifact this phase produces.
 Covers: what it does and why ArgoCD shows `(none)` without it; how to apply it;
 which six kinds are covered and which two are not, with reasons; what each
 health state means for a kgateway resource; the `controller.resource.health.persist`
 requirement for CLI verification; and when it is safe to remove, given that
 `argocd-cm` entries override bundled checks even after the PR merges.
 
-The SEFK customer package is phase 3. The product-docs entry has no owner yet.
+Product B's package docs are B1's deliverable. The product-docs entries have no
+owner yet.
 
 ---
 
