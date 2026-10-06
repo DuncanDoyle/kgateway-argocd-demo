@@ -66,7 +66,7 @@ different semantics. Customer-facing docs must say when it is safe to remove.
 | Phase | Scope | State |
 |---|---|---|
 | A1 | `Backend`, `TrafficPolicy` | **Complete.** 11 cluster-captured fixtures, passing argo-cd's own harness, proven on a live cluster |
-| A2 | `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse` | [Design approved](docs/superpowers/specs/2026-10-06-phase2-design.md); [implementation plan](docs/superpowers/plans/2026-10-06-phase-a2.md) ready for review |
+| A2 | `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse` | [Design approved](docs/superpowers/specs/2026-10-06-phase2-design.md); [implementation plan](docs/superpowers/plans/2026-10-06-phase-a2.md) revised after review — ready to execute |
 
 A2 completes coverage of every `gateway.kgateway.dev` kind that has a status to check — five of eight — and closes #13871 with three documented exclusions. Product A then
 ships as a documented ConfigMap package, followed by the upstream argo-cd PR.
