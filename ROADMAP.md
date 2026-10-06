@@ -38,7 +38,7 @@ different semantics. Customer-facing docs must say when it is safe to remove.
 | Phase | Scope | State |
 |---|---|---|
 | 1 | `gateway.kgateway.dev`: `Backend`, `TrafficPolicy` | **Complete.** 11 cluster-captured fixtures, passing argo-cd's own harness, proven on a live cluster |
-| 2 | `gateway.kgateway.dev`: `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse`, `GatewayExtension` | Design started — scope agreed, Sections 2-4 outstanding |
+| 2 | `gateway.kgateway.dev`: `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse`, `GatewayExtension` | [Design drafted](docs/superpowers/specs/2026-10-06-phase2-design.md) — awaiting approval |
 | 3 | `enterprisekgateway.solo.io`, `enterprise.solo.io`, `waf.solo.io` | Not designed |
 | 4 | `portal.solo.io` | Not designed |
 
