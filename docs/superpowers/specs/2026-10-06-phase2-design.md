@@ -7,7 +7,8 @@ nothing is implemented yet.
 **Builds on:** [phase 1 design](2026-09-22-kgateway-argocd-demo-design.md)
 
 Phase 1 shipped health checks for `Backend` and `TrafficPolicy`. Phase 2 brings
-`gateway.kgateway.dev` coverage to six kinds and closes
+`gateway.kgateway.dev` coverage to five of the group's eight kinds — every kind
+that has a status to check — and closes
 [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
 
 This phase is **A2** — the second phase of **product A**, kgateway ArgoCD
@@ -27,8 +28,7 @@ Four new kinds:
 |---|---|---|
 | `ListenerPolicy` | `status.ancestors[].conditions[]` | |
 | `BackendConfigPolicy` | `status.ancestors[].conditions[]` | |
-| `DirectResponse` | `status.ancestors[].conditions[]` | CRD declares `Accepted` and `Attached` printcolumns, same pair as `TrafficPolicy` |
-| `GatewayExtension` | `status.conditions[]` | condition vocabulary **unverified** — see Section 3 |
+| `DirectResponse` | `status.ancestors[].conditions[]` | CRD declares `Accepted` and `Attached` printcolumns, same pair as `TrafficPolicy`. Wire field for the response code is `spec.status`, **not** `spec.statusCode` — the latter is only the Go field name |
 
 Two kinds are excluded, and both exclusions are stated in the PR body and the
 issue-closing comment rather than passed over silently:
@@ -38,6 +38,17 @@ issue-closing comment rather than passed over silently:
 - **`HTTPListenerPolicy`** — deprecated in 2.4.x in favour of
   `ListenerPolicy.spec.httpSettings`, and already absent from `main`. A check
   would ship for a kind that disappears one minor later.
+- **`GatewayExtension`** — **writes no status at all.** Added to this list
+  2026-10-06 after the claim was tested rather than assumed: a valid and an
+  invalid `GatewayExtension` were created on a live kgateway v2.4.5 cluster and
+  neither produced a `status` block after 30s, while the controller logged
+  `GatewayExtension handler sync complete` for both. The API declares
+  `GatewayExtensionStatus.Conditions` and the CRD carries
+  `gatewayextensions/status` RBAC markers, but no code populates it — a
+  schema is not evidence that a controller writes it. Same case as
+  `GatewayParameters`. **A kgateway issue should be filed**, since this is a
+  product gap rather than a design choice, and fixing it would unblock a real
+  check later.
 
 The upstream PR folds into the branch held from phase 1, so one PR covers all
 six kinds. Per the roadmap's delivery model, the `argocd-cm` package ships
@@ -73,7 +84,7 @@ use it for exactly this purpose.
 healthchecks/lua/
 ├── ancestors/health.lua    → TrafficPolicy, ListenerPolicy,
 │                             BackendConfigPolicy, DirectResponse
-└── conditions/health.lua   → Backend, GatewayExtension
+└── conditions/health.lua   → Backend
 ```
 
 A sync script copies each into its kinds' directories under
@@ -119,7 +130,9 @@ purpose is to generate status for capture, and its README says so. This keeps
 
 ### Fixture count
 
-Eight new fixtures — healthy and degraded per new kind — for **19 total**.
+Six new fixtures — healthy and degraded for each of the three new kinds — plus
+four pinning failure modes that no feature test would otherwise catch. See the
+implementation plan's Review Focus for the latter.
 
 The reasoning follows from Section 2. Because the four ancestors kinds share one
 byte-identical script, TrafficPolicy's existing 8 fixtures already prove the
@@ -144,31 +157,18 @@ below are **predictions, not observations**:
 | `ListenerPolicy` degraded | config that fails translation, e.g. route-level tracing with no listener-level provider | **low — mechanism unverified** |
 | `BackendConfigPolicy` healthy | attach to `httpbin-static` with simple TLS or timeout settings | high |
 | `BackendConfigPolicy` degraded | TLS config referencing a Secret that does not exist | medium |
-| `DirectResponse` healthy | referenced by an HTTPRoute `ExtensionRef` filter | medium — attachment is filter-based, not `targetRefs` |
+| `DirectResponse` healthy | referenced by an HTTPRoute `ExtensionRef` filter; response code goes in `spec.status` | medium — attachment is filter-based, not `targetRefs` |
 | `DirectResponse` degraded | referenced by nothing, or an invalid status code / body combination | **low** |
-| `GatewayExtension` healthy | `extAuth` pointing at the httpbin Service — translation is not expected to validate that the service speaks ext_authz | medium — and its condition vocabulary is the probe's first question |
-| `GatewayExtension` degraded | `extAuth` pointing at a Service that does not exist | medium |
 
 **Two things the probe must establish before any Lua is written:**
 
-1. **`GatewayExtension`'s condition vocabulary.** Phase 1's `conditions` script
-   recognises `Accepted` and `EndpointsDiscovered` with `Accepted`/`Invalid`
-   reasons. `GatewayExtensionStatus` declares no condition types of its own in
-   the API, and I could not trace where its conditions are populated. If it uses
-   a different vocabulary the shared `conditions` script does **not** work
-   unchanged.
+1. ~~`GatewayExtension`'s condition vocabulary.~~ **Settled 2026-10-06 by
+   testing it: there is no vocabulary, because there is no status.** The kind
+   is excluded; see the exclusions above. The earlier decision to add a third
+   script rather than drop the kind was made for a situation that does not
+   apply — it covered a *differing* vocabulary, not an absent one. A third
+   script would have nothing to read.
 
-   **Decision (Duncan, 2026-10-06): if the vocabulary differs, add a third,
-   kind-specific script — do not drop `GatewayExtension` from phase 2.**
-
-   It would live at `healthchecks/lua/gatewayextension/health.lua`, carry a
-   header comment stating which condition types and reasons it recognises and
-   why it could not share the `conditions` script, and be covered by the same
-   drift test (trivially, as the only copy of itself). The cost is a third file
-   to maintain and one script outside the shared-logic guarantee; the benefit is
-   that users get working health for a kind they actually deploy. Scope grows by
-   roughly 80 lines of Lua and no extra fixtures — the two planned for
-   `GatewayExtension` serve it either way.
 2. **Whether the three new ancestors kinds really carry `Accepted` + `Attached`
    against a Gateway ancestor**, as `TrafficPolicy` does. `DirectResponse`'s
    printcolumns say yes for it; the other two are assumed.

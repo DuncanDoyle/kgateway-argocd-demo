@@ -66,9 +66,9 @@ different semantics. Customer-facing docs must say when it is safe to remove.
 | Phase | Scope | State |
 |---|---|---|
 | A1 | `Backend`, `TrafficPolicy` | **Complete.** 11 cluster-captured fixtures, passing argo-cd's own harness, proven on a live cluster |
-| A2 | `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse`, `GatewayExtension` | [Design approved](docs/superpowers/specs/2026-10-06-phase2-design.md); [implementation plan](docs/superpowers/plans/2026-10-06-phase-a2.md) ready for review |
+| A2 | `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse` | [Design approved](docs/superpowers/specs/2026-10-06-phase2-design.md); [implementation plan](docs/superpowers/plans/2026-10-06-phase-a2.md) ready for review |
 
-A2 completes `gateway.kgateway.dev` coverage and closes #13871. Product A then
+A2 completes coverage of every `gateway.kgateway.dev` kind that has a status to check — five of eight — and closes #13871 with three documented exclusions. Product A then
 ships as a documented ConfigMap package, followed by the upstream argo-cd PR.
 
 ### Product B — Solo Enterprise for kgateway
@@ -95,6 +95,7 @@ resource.customizations.health.gateway.kgateway.dev_TrafficPolicy
 |---|---|
 | `GatewayParameters` | No status implemented — the CRD schema says so outright. Any check would be a constant. Revisit if kgateway implements status. |
 | `HTTPListenerPolicy` | Deprecated in 2.4.x in favour of `ListenerPolicy.spec.httpSettings`, and already absent from `main`. A check would ship for a kind that disappears next minor. |
+| `GatewayExtension` | Writes no status at all — verified on a live v2.4.5 cluster, not inferred: a valid and an invalid instance both produced no `status` block while the controller logged successful reconciliation. The API declares the status type and the CRD carries `/status` RBAC, but nothing populates it. **File a kgateway issue**; revisit once implemented. |
 | `ratelimit.solo.io/RateLimitConfig` | Empty status — same case as `GatewayParameters`. Confirm against a live SEFK cluster during B1. |
 | `extauth.solo.io/AuthConfig` | Empty status — as above. |
 
