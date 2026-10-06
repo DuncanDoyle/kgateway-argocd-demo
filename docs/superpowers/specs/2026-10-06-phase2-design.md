@@ -46,9 +46,10 @@ issue-closing comment rather than passed over silently:
   `GatewayExtensionStatus.Conditions` and the CRD carries
   `gatewayextensions/status` RBAC markers, but no code populates it — a
   schema is not evidence that a controller writes it. Same case as
-  `GatewayParameters`. **A kgateway issue should be filed**, since this is a
-  product gap rather than a design choice, and fixing it would unblock a real
-  check later.
+  `GatewayParameters`. Filed as
+  [kgateway#14792](https://github.com/kgateway-dev/kgateway/issues/14792) — a
+  product gap rather than a design choice; fixing it would unblock a real check
+  later.
 
 The upstream PR folds into the branch held from phase 1, so one PR covers all
 six kinds. Per the roadmap's delivery model, the `argocd-cm` package ships
