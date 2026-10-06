@@ -144,6 +144,20 @@ A per-version failure must surface rather than hide behind top-level
 conditions, so this needs real aggregation design rather than a copy of what
 exists.
 
+## Before product A ships
+
+Release gates, carried from phase 1 as known gaps rather than discovered late:
+
+- [ ] **Verify `setup.sh` on a clean machine.** It has only ever run where the
+      minikube node image and the kgateway/argo-cd OCI charts were already
+      cached from other profiles, so the `registry.k8s.io` pull path is
+      untested — and that is the path anyone reproducing from the README takes.
+      Testing it means a full teardown and rebuild, so do it when the cluster is
+      no longer needed as a fixture source.
+- [ ] Regenerate `healthchecks/argocd-cm-patch.yaml` for all six kinds.
+- [ ] Refresh `docs/evidence/` so the before/after capture covers six kinds.
+- [ ] Write product A's package documentation (see below).
+
 ## Documentation deliverables
 
 Not yet written, and not yet in any phase's plan. The repo's current docs
