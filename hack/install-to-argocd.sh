@@ -20,6 +20,13 @@ if [ ! -d "$SRC" ]; then
   echo "error: $SRC does not exist; generate the tree first" >&2
   exit 1
 fi
+# An existing but empty source is destructive, not merely useless: rsync
+# --delete would wipe the whole destination, including uncommitted work. This
+# happens after a half-failed generator run or a cleaned out/ directory.
+if ! find "$SRC" -name health.lua -print -quit | grep -q .; then
+  echo "error: $SRC contains no health.lua; refusing to --delete the destination with an empty source" >&2
+  exit 1
+fi
 if [ ! -d "$ARGOCD_DIR/.git" ]; then
   echo "error: $ARGOCD_DIR is not a git checkout" >&2
   exit 1
