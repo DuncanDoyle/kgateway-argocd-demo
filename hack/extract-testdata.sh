@@ -2,24 +2,28 @@
 # Assembles out/resource_customizations/gateway.kgateway.dev/ -- a
 # drop-in-ready tree for an argo-cd clone -- from this repo's TRACKED
 # content under healthchecks/lua/<Kind>/ (health.lua, health_test.yaml,
-# testdata/), and refreshes the five LIVE-CAPTURED testdata fixtures from
-# the current cluster before assembling.
+# testdata/), and refreshes the 12 LIVE-CAPTURED testdata fixtures from the
+# current cluster before assembling.
 #
 # IMPORTANT -- what this script writes, and what it never touches:
-#   - The `extract()` calls below overwrite the five TRACKED source files
-#     healthchecks/lua/{Backend,TrafficPolicy}/testdata/{healthy,degraded,
-#     progressing}.yaml directly (not just their copies in out/) -- those
-#     tracked files ARE the source of truth for these fixtures, since out/
-#     is gitignored and regenerated. Re-run this script any time the live
-#     cluster's status for these five resources changes and you want the
+#   - The 12 `extract()` calls below overwrite TRACKED source files under
+#     healthchecks/lua/<Kind>/testdata/ directly (not just their copies in
+#     out/) -- those tracked files ARE the source of truth for these fixtures,
+#     since out/ is gitignored and regenerated. Re-run this script any time the
+#     live cluster's status for these resources changes and you want the
 #     tracked fixtures to reflect it.
-#   - The other SIX fixtures (Backend/stale, TrafficPolicy/{stale,
-#     foreign_controller,overridden,overridden_empty_message,
-#     partially_valid}) are DERIVED/asserted content -- see each file's own
-#     header comment and DRAFT-argocd-pr.md's "Fixture provenance" section.
-#     They cannot be reproduced by capturing a live resource. This script
-#     NEVER writes those six filenames -- only the five named in the
-#     `extract` calls below -- so a re-run cannot silently destroy them.
+#   - The other 9 of the 21 fixtures are never written by this script:
+#       * 7 DERIVED/asserted: Backend/no_status, ListenerPolicy/
+#         foreign_controller, TrafficPolicy/{stale,foreign_controller,
+#         overridden,overridden_empty_message,partially_valid}.
+#       * 1 hand-captured: Backend/stale, a real capture taken mid-probe that
+#         cannot be reproduced on demand.
+#       * 1 SYNTHETIC: TrafficPolicy/wrong_shape, a state kgateway never
+#         produces.
+#     See each file's own header comment for exactly what was substituted. They
+#     cannot be reproduced by capturing a live resource, and this script NEVER
+#     writes those nine filenames -- only the 12 named in the `extract` calls
+#     below -- so a re-run cannot silently destroy them.
 #
 # Strips managedFields/uid/resourceVersion/creationTimestamp/annotations --
 # noise that upstream's existing fixtures do not carry -- but keeps the
@@ -46,7 +50,7 @@ source ./hack/kind-shapes.sh
 # Captures a live resource and overwrites the TRACKED fixture at
 # healthchecks/lua/<Kind>/testdata/<state>.yaml. Only call this for a
 # fixture known to be reproducible from a live capture -- see the header
-# above for the fixed list of five.
+# above; the 12 extract calls below are the complete list.
 extract() {
   local ns="$1" res="$2" kind="$3" state="$4"
   local dir="${SRC}/${kind}/testdata"
@@ -125,7 +129,7 @@ extract "${DEMO_NS}" directresponse/dr-healthy            DirectResponse      he
 extract "${DEMO_NS}" directresponse/dr-unreferenced       DirectResponse      no_status
 
 echo
-echo "==> Assembling ${OUT} from ${SRC}/ (health.lua, health_test.yaml, testdata/ -- all fixtures: 12 just-refreshed captures + tracked, derived fixtures, untouched above)"
+echo "==> Assembling ${OUT} from ${SRC}/ (health.lua, health_test.yaml, testdata/ -- all 21 fixtures: the 12 just-refreshed captures + the 9 tracked fixtures untouched above)"
 rm -rf "$OUT"
 install_shape() {
   local shape="$1"; shift

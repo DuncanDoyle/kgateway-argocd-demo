@@ -12,6 +12,23 @@ NS=argocd
 APPS="kgw-demo kgw-scenarios kgw-coverage"
 PREFIX="resource.customizations.health.gateway.kgateway.dev_"
 
+# Every assertion below is over the captured resource lines. A predicate over an
+# empty set is vacuously true, so first assert the set is not empty, with the
+# expected count as a literal. Update it when the demo or coverage manifests
+# gain or lose a gateway.kgateway.dev resource.
+EXPECTED_RESOURCES=14
+
+assert_capture_count() {
+  local file="$1" n
+  n="$(grep -c ' -> ' "$file" || true)"
+  if [ "$n" -eq 0 ]; then
+    echo "ERROR: ${file} captured no resources; every assertion on it would pass vacuously" >&2; exit 1
+  fi
+  if [ "$n" -ne "$EXPECTED_RESOURCES" ]; then
+    echo "ERROR: ${file} captured ${n} resources, expected ${EXPECTED_RESOURCES}" >&2; exit 1
+  fi
+}
+
 # Applications cache per-resource health and do not re-evaluate it when
 # argocd-cm changes, so a plain sleep yields stale (plausible-looking)
 # statuses. A hard refresh forces re-evaluation with the current ConfigMap.
@@ -45,6 +62,7 @@ done
 # 2-4. Before capture, asserted empty.
 hard_refresh_and_wait
 capture | tee docs/evidence/before.txt
+assert_capture_count docs/evidence/before.txt
 if grep -E -- '-> .+$' docs/evidence/before.txt; then
   echo "ERROR: a resource still reports health in the before-state (lines above)" >&2; exit 1
 fi
@@ -54,6 +72,7 @@ echo "before-state is genuine"
 kubectl -n "$NS" patch configmap argocd-cm --patch-file healthchecks/argocd-cm-patch.yaml >/dev/null
 hard_refresh_and_wait
 capture | tee docs/evidence/after.txt
+assert_capture_count docs/evidence/after.txt
 if grep -E -- '-> *$' docs/evidence/after.txt; then
   echo "ERROR: a resource has no health status in the after-state (lines above)" >&2; exit 1
 fi

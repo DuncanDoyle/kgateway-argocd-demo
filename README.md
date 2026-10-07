@@ -45,33 +45,53 @@ into its pod template.
 
 ## Verifying the health checks
 
-The real gate is argo-cd's own test harness, not the badges in the UI. All
-11 testdata fixtures are tracked in this repo under
-`healthchecks/lua/{Backend,TrafficPolicy}/testdata/` — 5 are live captures,
-6 are derived/asserted (see each file's header comment, and
-`hack/extract-testdata.sh`'s own comments, for which is which).
+The real gate is argo-cd's own test harness, not the badges in the UI. All 21
+testdata fixtures are tracked in this repo under
+`healthchecks/lua/<Kind>/testdata/`, across five kinds (`Backend`,
+`TrafficPolicy`, `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse`).
+13 are live captures, 7 are derived from a capture, and 1 is synthetic; each
+file's header comment, and the header of `hack/extract-testdata.sh`, say which
+is which.
+
+`hack/extract-testdata.sh` refreshes 12 of the captured fixtures from the live
+cluster, and 7 of those 12 come from the coverage resources. So the cluster must
+have **all three** Applications deployed, not just the two the demo walks
+through. Follow [DEMO.md](DEMO.md) first, including its "Deploy the coverage
+resources" step: it must run **after** `kgw-demo` has synced, because the
+coverage resources live in the `httpbin` namespace and attach to `demo-gateway`,
+both created by `kgw-demo`. [COVERAGE.md](COVERAGE.md) records what each
+coverage resource is for and the status it was observed to produce. Without
+them `extract-testdata.sh` fails on the first missing resource, and so do
+`check-generated.sh` and `capture-evidence.sh`.
 
 ```bash
-./setup.sh                      # needed: extract-testdata.sh refreshes
-                                 # the 5 captured fixtures from this cluster
-./hack/extract-testdata.sh
-cp -r out/resource_customizations/gateway.kgateway.dev \
-      <path-to-argo-cd-clone>/resource_customizations/
+./hack/extract-testdata.sh      # regenerates out/resource_customizations/gateway.kgateway.dev
+./hack/install-to-argocd.sh     # mirrors that tree into your argo-cd clone
 cd <path-to-argo-cd-clone>
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'
 ```
 
-Verified against argo-cd `1db740c1fa7854052c554742d4d6baaa2663c952`
-(`upstream/master`, 2026-09-24) — 11/11 fixtures pass; the full
-`go test -v ./util/lua/` suite also passes on this base, so the added
-checks don't regress anything else in the harness. Re-verified 2026-09-24
-following the exact steps above from a fresh clone of this repo.
+`install-to-argocd.sh` reads the clone location from `ARGOCD_DIR` (default
+`~/Development/github/argo-cd`), refuses an empty source, and syncs only the
+`resource_customizations/gateway.kgateway.dev` directory, so uncommitted work
+elsewhere in the clone is never touched. Prefer it over a manual `cp -r`, which
+leaves stale files behind when a fixture is removed.
+
+Verified against argo-cd `2f3711241` (base of the upstream branch): the command
+above reports 21 passing fixtures.
 
 ### Regenerating the before/after evidence
 
 `./hack/capture-evidence.sh` removes every health key from `argocd-cm`, captures `docs/evidence/before.txt` (asserting every health status is empty), applies the patch, and captures `after.txt` (asserting every status is non-empty). It hard-refreshes the Applications each time because they cache per-resource health and ignore an `argocd-cm` change until refreshed, so a plain sleep yields plausible but stale statuses.
 
 ### Reproducibility guard
+
+**Convention: every assertion over a collection first asserts that the
+collection is non-empty, with the expected count as a literal.** A predicate
+quantified over an empty set is vacuously true, and "all statuses are empty" or
+"all fixtures pass" then succeeds having checked nothing. When the set grows or
+shrinks, the literal is updated in the same commit, which makes the change
+visible in review.
 
 `healthchecks/` holds generated artefacts (captured fixtures and the
 `argocd-cm` patch). To prove they still match what the scripts produce:

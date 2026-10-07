@@ -11,12 +11,9 @@ Phase 1 shipped health checks for `Backend` and `TrafficPolicy`. Phase 2 brings
 that has a status to check — and closes
 [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
 
-This phase is **A2** — the second phase of **product A**, kgateway ArgoCD
-support, which is delivered and supported independently of product B (Solo
-Enterprise for kgateway ArgoCD support). A2 completes product A's current
-scope. B extends A with the enterprise API groups and never restates A's kinds;
-see [ROADMAP.md](../../../ROADMAP.md). Everything in this document is a public
-OSS artifact and must not reference SEFK.
+This phase is the second phase of the kgateway ArgoCD support work and
+completes its current scope; see [ROADMAP.md](../../../ROADMAP.md). Everything
+in this document is a public OSS artifact.
 
 ---
 
@@ -215,21 +212,17 @@ unrecognised-reason fallback).
 
 ### Documentation — a phase 2 deliverable, not an afterthought
 
-The roadmap identifies this as a gap. Phase 2 ships **one** of the four doc
-deliverables:
+The roadmap identifies this as a gap. Phase 2 ships the package documentation:
 
-**Product A's ConfigMap package** — for a kgateway user who wants health checks
-today. This is product A's package and covers `gateway.kgateway.dev` only; a
-SEFK customer additionally applies product B's package, which is out of scope
-here and must not be mentioned in any public artifact this phase produces.
+**The ConfigMap package** — for a kgateway user who wants health checks today.
+It covers `gateway.kgateway.dev` only.
 Covers: what it does and why ArgoCD shows `(none)` without it; how to apply it;
-which six kinds are covered and which two are not, with reasons; what each
+which five kinds are covered and which three are not, with reasons; what each
 health state means for a kgateway resource; the `controller.resource.health.persist`
 requirement for CLI verification; and when it is safe to remove, given that
 `argocd-cm` entries override bundled checks even after the PR merges.
 
-Product B's package docs are B1's deliverable. The product-docs entries have no
-owner yet.
+The entry in the kgateway docs has no owner yet.
 
 ---
 

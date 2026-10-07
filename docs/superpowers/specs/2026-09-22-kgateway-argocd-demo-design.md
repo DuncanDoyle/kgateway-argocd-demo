@@ -116,7 +116,7 @@ kgateway-argocd-demo/
     └── extract-testdata.sh   # cluster → out/resource_customizations/…
 ```
 
-`healthchecks/` lives in this repo because the development loop is here: edit Lua, apply the ConfigMap, watch the badge change within ~10s. Restructuring into `resource_customizations/` layout happens only at PR time. This repo also remains the source of truth for the `argocd-cm` delivery vehicle, which is how SEFK customers and anyone on an older ArgoCD will consume these checks.
+`healthchecks/` lives in this repo because the development loop is here: edit Lua, apply the ConfigMap, watch the badge change within ~10s. Restructuring into `resource_customizations/` layout happens only at PR time. This repo also remains the source of truth for the `argocd-cm` delivery vehicle, which is how anyone on an older ArgoCD will consume these checks.
 
 ## Demo manifests
 
@@ -332,7 +332,6 @@ Either way this is not evidence of a `Backend` status gap — an earlier draft o
 
 - **Gitea as the git source.** v1 points ArgoCD straight at the public GitHub repo; broken variants are committed up front, so no pushes happen at demo time. Gitea earns its place later for air-gapped demos (cf. `ent-kgw-airgapped-demo`), for workshops where attendees need push rights without GitHub accounts, and — most importantly — to show the real GitOps loop: edit a TrafficPolicy, commit, watch the health badge flip. Switching Application paths demonstrates the health check but not the loop. `env.sh` isolates `REPO_URL`/`REPO_REVISION` so this is a config change, not a rewrite.
 - **The remaining five CRDs** — `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse` (ancestors shape, mechanical once `TrafficPolicy` works), `GatewayExtension` (conditions shape, needs an ext-auth/ext-proc service), `GatewayParameters` (blocked: no status).
-- **SEFK health checks.** `enterprisekgateway.solo.io` and `portal.solo.io` reuse the same two shapes, so the Lua transfers nearly verbatim: `EnterpriseKgatewayTrafficPolicy` is ancestors-shaped; `EnterpriseKgatewayParameters`, `EnterpriseKgatewayDestinationSelector`, `Portal`, `ApiProduct`, `ApiDoc` are conditions-shaped; `PortalParameters` has no status. `ApiProduct` needs extra thought — it has nested `status.versions[].conditions[]`, so a per-version failure should surface rather than hide behind top-level conditions. Being commercial is not a barrier to contributing upstream: a health check is Lua over a public status shape, and upstream already carries checks for commercial products (`datadoghq.com`, `coralogix.com`, `astra.netapp.io`).
 - **AWS/EC2 Backend coverage.** `EndpointsDiscovered` failure modes (`CredentialError`, `AuthorizationError`, `DiscoveryError`, `NoMatchingInstances`, `Degraded`) are handled by the Lua but have no fixtures, because producing them needs real AWS credentials and this demo is offline by design. Add an AWS/EC2 path — either an optional flag in the demo or a dump sourced from a cluster that runs one — so ArgoCD health support genuinely covers those Backend types.
 - **Update kgateway#13871** before implementation: the status table is wrong (see above), and the inventory is version-dependent. Record the v1 scope as a partial contribution with the follow-up kinds named, so the issue stays open with a clear remainder.
 

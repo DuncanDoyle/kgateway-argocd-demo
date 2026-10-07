@@ -20,6 +20,27 @@ The `kgw-demo` Application tree shows the Gateway, both HTTPRoutes, the
 Backend and the TrafficPolicy. Note that `Backend` and `TrafficPolicy` show
 **no health status** — that is the gap this repo exists to close.
 
+## Deploy the coverage resources
+
+The `kgw-coverage` Application holds resources in several health states for
+`ListenerPolicy`, `BackendConfigPolicy` and `DirectResponse`. It is not
+part of the narrative; it generates the status that
+`hack/extract-testdata.sh` captures, so `extract-testdata.sh`,
+`check-generated.sh` and `capture-evidence.sh` all need it.
+
+```bash
+source ./env.sh && sed -e "s|\${REPO_URL}|${REPO_URL}|g" \
+  -e "s|\${REPO_REVISION}|${REPO_REVISION}|g" \
+  argocd/app-coverage.yaml | kubectl apply -f -
+argocd app sync kgw-coverage   # or press Sync in the UI
+```
+
+Order matters: sync `kgw-demo` first. The coverage resources live in the
+`httpbin` namespace, which `kgw-demo` creates, and attach to `demo-gateway`.
+Applied earlier, they have no namespace to land in and nothing to attach to.
+See [COVERAGE.md](COVERAGE.md) for what each resource is for and what was
+observed.
+
 ## Prove the data path
 
 ```bash

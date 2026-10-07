@@ -3,36 +3,11 @@
 Programme-level view of the work tracked by
 [kgateway-dev/kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
 Each phase gets its own design spec and implementation plan under
-[`docs/superpowers/`](docs/superpowers/); this page says what ships to whom,
-in what order, and as which product.
+[`docs/superpowers/`](docs/superpowers/); this page says what ships, in what
+order, and why some kinds are excluded. Further phases may follow once these
+complete; they are not described here.
 
-**Last updated:** 2026-10-06
-
-## Two products, not one
-
-This work is delivered as **two independently supported products**:
-
-| | Product | Covers | Audience |
-|---|---|---|---|
-| **A** | kgateway ArgoCD support | `gateway.kgateway.dev` | kgateway OSS users — and SEFK customers, since SEFK ships these CRDs too |
-| **B** | Solo Enterprise for kgateway ArgoCD support | `enterprisekgateway.solo.io`, `enterprise.solo.io`, `waf.solo.io`, later `portal.solo.io` | SEFK customers |
-
-**B is an extension of A, not a superset.** It covers only the enterprise API
-groups and never restates A's kinds. A SEFK customer applies **both** packages:
-A for the kgateway CRDs their install ships, B for the enterprise ones. Each has
-its own version stream, support matrix and documentation.
-
-This works cleanly because `argocd-cm` keys are per group and kind
-(`resource.customizations.health.<group>_<Kind>`), so two patches merge into the
-one ConfigMap additively with no overlap.
-
-Two consequences worth holding on to:
-
-- **A must never reference B.** Product A's repo, docs and upstream PR are
-  public OSS artifacts; they must not name SEFK, link to internal repos, or
-  describe enterprise APIs.
-- **B's home is not this repo.** This repo is public and is product A. Where B
-  lives is an open decision (see below).
+**Last updated:** 2026-10-07
 
 ## The problem
 
@@ -49,7 +24,7 @@ Two vehicles for the same Lua, and the order matters:
 
 1. **`argocd-cm` ConfigMap — ships first.** Works on any ArgoCD version with no
    upstream dependency, which makes it both the development loop (edit, apply,
-   watch the badge change in ~10s) and the first thing users and customers get.
+   watch the badge change in ~10s) and the first thing users get.
 2. **Bundled upstream in `argoproj/argo-cd` — ships after.** Gets the checks in
    front of everyone by default, on ArgoCD's release cadence.
 
@@ -57,36 +32,28 @@ Two vehicles for the same Lua, and the order matters:
 `GetHealthScript`: configmap exact → configmap wildcard → embedded exact →
 embedded wildcard). So the ConfigMap is not merely a stopgap — it stays valid
 after the upstream PR merges, and remains the escape hatch for anyone who needs
-different semantics. Customer-facing docs must say when it is safe to remove.
+different semantics. The docs must say when it is safe to remove.
 
 ## Status
 
-### Product A — kgateway
-
 | Phase | Scope | State |
 |---|---|---|
-| A1 | `Backend`, `TrafficPolicy` | **Complete.** 11 cluster-captured fixtures, passing argo-cd's own harness, proven on a live cluster |
-| A2 | `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse` | [Design approved](docs/superpowers/specs/2026-10-06-phase2-design.md); [implementation plan](docs/superpowers/plans/2026-10-06-phase-a2.md) revised after review — ready to execute |
+| 1 | `Backend`, `TrafficPolicy` | **Complete.** Cluster-captured fixtures, passing argo-cd's own harness, proven on a live cluster |
+| 2 | `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse` | **Implemented.** [Design](docs/superpowers/specs/2026-10-06-phase2-design.md), [plan](docs/superpowers/plans/2026-10-06-phase-a2.md); 21 fixtures across five kinds pass the upstream harness |
 
-A2 completes coverage of every `gateway.kgateway.dev` kind that has a status to check — five of eight — and closes #13871 with three documented exclusions. Product A then
-ships as a documented ConfigMap package, followed by the upstream argo-cd PR.
-
-### Product B — Solo Enterprise for kgateway
-
-| Phase | Scope | State |
-|---|---|---|
-| B1 | `enterprisekgateway.solo.io`, `enterprise.solo.io`, `waf.solo.io` | Not designed |
-| B2 | `portal.solo.io` | Not designed |
-
-B1 cannot start until A2 is implemented — B extends A and should not be designed
-against a moving target — and needs a **licensed SEFK cluster** to capture
-fixtures.
+Phase 2 completes coverage of every `gateway.kgateway.dev` kind that has a
+status to check — five of eight — and closes #13871 with three documented
+exclusions. The checks then ship as a documented ConfigMap package, followed by
+the upstream argo-cd PR.
 
 ### Currently supported
 
 ```
 resource.customizations.health.gateway.kgateway.dev_Backend
 resource.customizations.health.gateway.kgateway.dev_TrafficPolicy
+resource.customizations.health.gateway.kgateway.dev_ListenerPolicy
+resource.customizations.health.gateway.kgateway.dev_BackendConfigPolicy
+resource.customizations.health.gateway.kgateway.dev_DirectResponse
 ```
 
 ### Excluded, with reasons
@@ -96,56 +63,21 @@ resource.customizations.health.gateway.kgateway.dev_TrafficPolicy
 | `GatewayParameters` | No status implemented — the CRD schema says so outright. Any check would be a constant. Revisit if kgateway implements status. |
 | `HTTPListenerPolicy` | Deprecated in 2.4.x in favour of `ListenerPolicy.spec.httpSettings`, and already absent from `main`. A check would ship for a kind that disappears next minor. |
 | `GatewayExtension` | Writes no status at all — verified on a live v2.4.5 cluster, not inferred: a valid and an invalid instance both produced no `status` block while the controller logged successful reconciliation. The API declares the status type and the CRD carries `/status` RBAC, but nothing populates it. Filed as [kgateway#14792](https://github.com/kgateway-dev/kgateway/issues/14792); revisit once implemented. |
-| `ratelimit.solo.io/RateLimitConfig` | Empty status — same case as `GatewayParameters`. Confirm against a live SEFK cluster during B1. |
-| `extauth.solo.io/AuthConfig` | Empty status — as above. |
 
-## Phases
+## Phase 2 design decisions
 
-### A2 — remaining kgateway OSS CRDs
+Brings `gateway.kgateway.dev` coverage to five kinds and **closes #13871**.
 
-Brings `gateway.kgateway.dev` coverage to six kinds and **closes #13871**.
+Two byte-identical Lua scripts (one per status shape) use `obj.kind` for
+messages, copied per kind with a drift test — argo-cd's Lua VM has no module
+system, so this is the only way to avoid hand-maintained copies. A third ArgoCD
+Application, `kgw-coverage`, holds the new kinds so the demo narrative stays
+minimal. Phase 1's two scripts were refactored onto the shared form; that change
+is behaviour-preserving, so the phase 1 fixtures were its regression test.
 
-Agreed so far: two byte-identical Lua scripts (one per status shape) using
-`obj.kind` for messages, copied per kind with a drift test — argo-cd's Lua VM
-has no module system, so this is the only way to avoid four hand-maintained
-copies; a third ArgoCD Application `kgw-coverage` holds the new kinds so the
-demo narrative stays minimal; eight new fixtures (healthy + degraded per kind),
-19 total.
+**Ships:** the ConfigMap package, then the upstream PR.
 
-Also in scope: refactoring phase 1's two scripts onto the shared form. That
-change is behaviour-preserving — the rendered messages are identical — so the
-existing 11 fixtures are its regression test.
-
-**Ships:** product A's ConfigMap package, then the upstream PR. Completes product A's current scope.
-
-### B1 — Solo Enterprise for kgateway
-
-`enterprisekgateway.solo.io` (TrafficPolicy, Parameters, DestinationSelector),
-`enterprise.solo.io` (EnterpriseListenerSet), `waf.solo.io` (WAFPolicy). Same
-two status shapes, so the Lua transfers nearly unchanged.
-
-Two things make this unlike phases 1-2. It needs a **licensed SEFK cluster** to
-capture fixtures, since the method is probe-first rather than written from
-source. And whether these checks go upstream at all is a genuine question:
-being commercial is no barrier (upstream already carries checks for
-`datadoghq.com`, `coralogix.com`, `astra.netapp.io`, and Solo's own
-`gateway.solo.io`/`gloo.solo.io`), but the ConfigMap may simply be the better
-vehicle for a product with its own release cadence.
-
-**Ships:** product B's first release — the enterprise-groups package, applied alongside product A.
-
-### B2 — Portal
-
-`portal.solo.io`: `Portal`, `ApiProduct`, `ApiDoc`, and possibly
-`PortalConfig`, `PortalParameters`, `VisibilityPolicy` (several have no status
-— confirm live).
-
-The interesting one is `ApiProduct`, which nests `status.versions[].conditions[]`.
-A per-version failure must surface rather than hide behind top-level
-conditions, so this needs real aggregation design rather than a copy of what
-exists.
-
-## Before product A ships
+## Before release
 
 Release gates, carried from phase 1 as known gaps rather than discovered late:
 
@@ -155,21 +87,20 @@ Release gates, carried from phase 1 as known gaps rather than discovered late:
       untested — and that is the path anyone reproducing from the README takes.
       Testing it means a full teardown and rebuild, so do it when the cluster is
       no longer needed as a fixture source.
-- [ ] Regenerate `healthchecks/argocd-cm-patch.yaml` for all six kinds.
-- [ ] Refresh `docs/evidence/` so the before/after capture covers six kinds.
-- [x] Write product A's package documentation ([docs/INSTALL.md](docs/INSTALL.md)).
+- [x] Regenerate `healthchecks/argocd-cm-patch.yaml` for all five kinds.
+- [x] Refresh `docs/evidence/` so the before/after capture covers five kinds.
+- [x] Write the package documentation ([docs/INSTALL.md](docs/INSTALL.md)).
 
 ## Documentation deliverables
 
-Not yet written, and not yet in any phase's plan. The repo's current docs
-(`README.md`, `DEMO.md`, `SCENARIOS.md`) are written for us, not for consumers.
-
-| Deliverable | Audience | When |
+| Deliverable | Audience | State |
 |---|---|---|
-| Product A package docs — install, what each status means, how to remove once upstream ships | kgateway OSS users | end of A2 |
-| Product B package docs — enterprise kinds, supported SEFK version matrix, and that product A must be applied too | SEFK customers | end of B1 |
+| Package docs — install, what each status means, how to remove once upstream ships | kgateway users | written ([docs/INSTALL.md](docs/INSTALL.md)) |
 | Upstream PR body + `#13871` closing comment | argo-cd maintainers, kgateway community | with the PR |
-| Product docs entries — one per product | kgateway.dev (A), docs.solo.io (B) | after B1 — owner TBD |
+| Entry in the kgateway docs | kgateway users | after the upstream PR — owner TBD |
+
+The repo's other docs (`README.md`, `DEMO.md`, `SCENARIOS.md`) are written for
+people reproducing the fixtures, not for consumers of the checks.
 
 ## Method
 
@@ -183,18 +114,10 @@ caused every significant defect found so far:
   cluster. Where a state cannot be produced, say so in the PR rather than
   fabricating it. Derived fixtures carry a header disclosing exactly what was
   substituted.
-- **Verify shipped CRDs, not Go types.** The two differ. kgateway v2.4.5 ships
-  8 CRDs where `main` ships 7; SEFK ships 14 across six groups where the Go
-  types suggested three in one.
+- **Verify shipped CRDs, not Go types.** The two differ: kgateway v2.4.5 ships
+  8 CRDs where `main` ships 7.
 
 ## Open decisions
 
-- **Where product B lives.** This repo is public and is product A; B must not
-  ship from it. Candidates: a repo under `solo-io`, or a private repo of its
-  own. Needs deciding before B1's design.
-- Exact timing of the upstream PR relative to product A's ConfigMap release —
-  the PR is held at a local commit and folds in A2 before opening.
-- Whether product B's checks go upstream at all, or stay ConfigMap-only. Being
-  commercial is no barrier, but a product with its own release cadence may be
-  better served by the ConfigMap it controls.
-- Owner and location for the two product-docs entries.
+- Exact timing of the upstream PR relative to the ConfigMap release — the PR is
+  held at a local commit until the phase 2 work is folded in.

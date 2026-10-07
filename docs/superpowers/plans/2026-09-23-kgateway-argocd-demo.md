@@ -1681,7 +1681,7 @@ short — dense over exhaustive. It must contain:
 
 **Sanitisation:** this is a public OSS repo. Before posting, run the
 `sanitize-kgateway-oss-resources` skill over the comment and the PR body — no
-customer names, no `solo-io/gloo-gateway` links, no internal tracker IDs, no
+customer names, no internal-repository links, no internal tracker IDs, no
 local filesystem paths. Reference the demo by its GitHub URL only.
 
 - [ ] **Step 6: Add the verification section to `README.md`**
