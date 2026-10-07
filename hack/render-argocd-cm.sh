@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compiles healthchecks/lua/<Kind>/health.lua into the argocd-cm form.
+# Compiles the shared healthchecks/lua/<shape>/health.lua scripts into the argocd-cm form.
 #
 # argocd-cm entries OVERRIDE bundled checks (util/lua/lua.go GetHealthScript:
 # configmap exact -> configmap wildcard -> embedded exact -> embedded
@@ -9,6 +9,13 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 OUT="healthchecks/argocd-cm-patch.yaml"
+source ./hack/kind-shapes.sh
+
+emit_kind() {
+  local kind="$1" shape="$2"
+  echo "  resource.customizations.health.gateway.kgateway.dev_${kind}: |"
+  sed 's/^/    /' "healthchecks/lua/${shape}/health.lua"
+}
 
 {
   cat <<'HEADER'
@@ -22,10 +29,8 @@ metadata:
   namespace: argocd
 data:
 HEADER
-  for kind in Backend TrafficPolicy; do
-    echo "  resource.customizations.health.gateway.kgateway.dev_${kind}: |"
-    sed 's/^/    /' "healthchecks/lua/${kind}/health.lua"
-  done
+  for kind in ${ANCESTORS_KINDS}; do emit_kind "$kind" ancestors; done
+  for kind in ${CONDITIONS_KINDS}; do emit_kind "$kind" conditions; done
 } > "${OUT}"
 
 echo "wrote ${OUT}"

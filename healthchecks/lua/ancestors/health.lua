@@ -33,15 +33,7 @@
 local hs = {}
 
 -- Messages read obj.kind so this one script serves every kind of this status
--- shape byte-identically. obj.kind is always set on a real cluster object, but
--- concatenating nil raises a Lua error that would break health evaluation, so
--- fall back rather than trust it.
-local function kindName()
-  if obj ~= nil and obj.kind ~= nil and obj.kind ~= "" then
-    return obj.kind
-  end
-  return "resource"
-end
+-- shape byte-identically.
 
 local CONTROLLER = "kgateway.dev/kgateway"
 
@@ -123,7 +115,7 @@ if obj.status ~= nil and obj.status.ancestors ~= nil then
   end
   if progressing then
     hs.status = "Progressing"
-    hs.message = "Waiting for " .. kindName() .. " status"
+    hs.message = "Waiting for " .. obj.kind .. " status"
     return hs
   end
   if healthyMsg ~= nil then
@@ -137,5 +129,5 @@ end
 -- (or status is entirely absent). That is not healthy — it must not fall
 -- through to Healthy.
 hs.status = "Progressing"
-hs.message = "Waiting for " .. kindName() .. " status"
+hs.message = "Waiting for " .. obj.kind .. " status"
 return hs

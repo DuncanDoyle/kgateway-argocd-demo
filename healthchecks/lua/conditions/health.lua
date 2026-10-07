@@ -18,15 +18,7 @@
 local hs = {}
 
 -- Messages read obj.kind so this one script serves every kind of this status
--- shape byte-identically. obj.kind is always set on a real cluster object, but
--- concatenating nil raises a Lua error that would break health evaluation, so
--- fall back rather than trust it.
-local function kindName()
-  if obj ~= nil and obj.kind ~= nil and obj.kind ~= "" then
-    return obj.kind
-  end
-  return "resource"
-end
+-- shape byte-identically.
 
 local RECOGNISED = { Accepted = true, EndpointsDiscovered = true }
 
@@ -83,7 +75,7 @@ if obj.status ~= nil and obj.status.conditions ~= nil then
   end
   if sawStale then
     hs.status = "Progressing"
-    hs.message = "Waiting for " .. kindName() .. " status"
+    hs.message = "Waiting for " .. obj.kind .. " status"
     return hs
   end
   if healthyMsg ~= nil then
@@ -94,5 +86,5 @@ if obj.status ~= nil and obj.status.conditions ~= nil then
 end
 
 hs.status = "Progressing"
-hs.message = "Waiting for " .. kindName() .. " status"
+hs.message = "Waiting for " .. obj.kind .. " status"
 return hs
