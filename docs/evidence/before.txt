@@ -5,3 +5,13 @@ TrafficPolicy/add-demo-header (httpbin) ->
 Backend/backend-degraded (scenarios) -> 
 TrafficPolicy/tp-degraded (httpbin) -> 
 TrafficPolicy/tp-progressing (scenarios) -> 
+### kgw-coverage
+Backend/coverage-backend (httpbin) -> 
+BackendConfigPolicy/bcp-degraded (httpbin) -> 
+BackendConfigPolicy/bcp-healthy (httpbin) -> 
+DirectResponse/dr-healthy (httpbin) -> 
+DirectResponse/dr-unreferenced (httpbin) -> 
+ListenerPolicy/lp-degraded-accesslog (httpbin) -> 
+ListenerPolicy/lp-degraded-ca (httpbin) -> 
+ListenerPolicy/lp-healthy (httpbin) -> 
+ListenerPolicy/lp-unattached (httpbin) -> 
