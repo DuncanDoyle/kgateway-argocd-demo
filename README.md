@@ -65,6 +65,19 @@ Verified against argo-cd `1db740c1fa7854052c554742d4d6baaa2663c952`
 checks don't regress anything else in the harness. Re-verified 2026-09-24
 following the exact steps above from a fresh clone of this repo.
 
+### Reproducibility guard
+
+`healthchecks/` holds generated artefacts (captured fixtures and the
+`argocd-cm` patch). To prove they still match what the scripts produce:
+
+```bash
+./hack/check-generated.sh   # needs the live cluster; fails if healthchecks/ drifts
+```
+
+It re-runs `extract-testdata.sh` and `render-argocd-cm.sh`, then fails on any
+`git diff` under `healthchecks/`. Re-captures that differ only in
+`lastTransitionTime` do not count as drift.
+
 ## Using the checks before they ship upstream
 
 `argocd-cm` entries override bundled checks, so this works on any ArgoCD

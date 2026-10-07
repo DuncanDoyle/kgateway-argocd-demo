@@ -75,7 +75,18 @@ extract() {
       del(.metadata.annotations)
     ' -
   } > "${target}.tmp"
-  mv "${target}.tmp" "$target"
+  # Skip the overwrite when the capture is semantically identical to the
+  # tracked fixture. A controller re-transition (e.g. after the probe touches
+  # a resource) bumps only lastTransitionTime, which would otherwise dirty the
+  # tracked file on every run. Masking that one field keeps re-runs idempotent
+  # (and check-generated.sh meaningful) while a genuine status change -- reason,
+  # message, status, ancestors -- still differs after masking and overwrites.
+  mask_ltt() { sed -E 's/(lastTransitionTime:).*/\1 MASKED/' "$1"; }
+  if [ -f "$target" ] && [ "$(mask_ltt "$target")" = "$(mask_ltt "${target}.tmp")" ]; then
+    rm -f "${target}.tmp"
+  else
+    mv "${target}.tmp" "$target"
+  fi
 
   # An ABSENT status is a legitimate state (e.g. tp-progressing): a policy
   # that attaches to nothing never gets a status subresource written at
