@@ -18,6 +18,8 @@ reports **Healthy**, because ArgoCD has no opinion about resources it cannot
 assess. Standard `gateway.networking.k8s.io` resources do have checks; the
 `gateway.kgateway.dev` ones do not.
 
+**Open work is tracked in [OPEN_TASKS.md](OPEN_TASKS.md).**
+
 ## Delivery model
 
 Two vehicles for the same Lua, and the order matters:
@@ -25,8 +27,9 @@ Two vehicles for the same Lua, and the order matters:
 1. **`argocd-cm` ConfigMap — ships first.** Works on any ArgoCD version with no
    upstream dependency, which makes it both the development loop (edit, apply,
    watch the badge change in ~10s) and the first thing users get.
-2. **Bundled upstream in `argoproj/argo-cd` — ships after.** Gets the checks in
-   front of everyone by default, on ArgoCD's release cadence.
+2. **Bundled upstream in `argoproj/argo-cd` — deferred.** Not the next step: the ConfigMap package is validated in real use first, since early users find gaps a review pass cannot, and a fix is far cheaper in a ConfigMap than in a merged upstream script. See [OPEN_TASKS.md](OPEN_TASKS.md).
+   It remains the destination — it is how everyone gets the checks by default,
+   on ArgoCD's release cadence — just not yet.
 
 `argocd-cm` entries **override** bundled checks (`util/lua/lua.go`,
 `GetHealthScript`: configmap exact → configmap wildcard → embedded exact →

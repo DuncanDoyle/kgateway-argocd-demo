@@ -5,7 +5,7 @@ fixtures for ArgoCD health checks covering `gateway.kgateway.dev` CRDs.
 
 Tracks [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
 
-For the programme view — phases, what ships to whom, and what is
+Open work is tracked in [OPEN_TASKS.md](OPEN_TASKS.md). For the programme view — phases, what ships to whom, and what is
 deliberately excluded — see [ROADMAP.md](ROADMAP.md).
 
 **Using the health checks:** see [docs/INSTALL.md](docs/INSTALL.md).
