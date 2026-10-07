@@ -1,4 +1,18 @@
-# Healthy: attaches to the demo's static Backend.
+# Dedicated target. A BackendConfigPolicy failure surfaces on the targeted
+# Backend's own status, so coverage policies must NEVER target demo resources
+# (Backend/httpbin-static is the source of a tracked fixture).
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  name: coverage-backend
+  namespace: httpbin
+spec:
+  static:
+    hosts:
+    - host: httpbin.httpbin.svc.cluster.local
+      port: 8000
+---
+# Healthy: attaches to the coverage app's own Backend.
 apiVersion: gateway.kgateway.dev/v1alpha1
 kind: BackendConfigPolicy
 metadata:
@@ -8,7 +22,7 @@ spec:
   targetRefs:
   - group: gateway.kgateway.dev
     kind: Backend
-    name: httpbin-static
+    name: coverage-backend
 ---
 # Degraded candidate: TLS referencing a Secret that does not exist. Schema-valid,
 # so it passes admission; expected to fail at translation.
@@ -21,7 +35,7 @@ spec:
   targetRefs:
   - group: gateway.kgateway.dev
     kind: Backend
-    name: httpbin-static
+    name: coverage-backend
   tls:
     secretRef:
       name: no-such-tls-secret
