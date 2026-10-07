@@ -1,0 +1,22 @@
+# Manual sync, like kgw-scenarios. This Application exists to generate status
+# for fixture capture, not to demonstrate anything -- manifests/demo stays the
+# minimal narrative.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kgw-coverage
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: ${REPO_URL}
+    targetRevision: ${REPO_REVISION}
+    path: manifests/coverage
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: coverage
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true

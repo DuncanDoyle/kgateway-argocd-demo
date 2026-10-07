@@ -1,0 +1,27 @@
+# Healthy: attaches to the demo's static Backend.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: BackendConfigPolicy
+metadata:
+  name: bcp-healthy
+  namespace: httpbin
+spec:
+  targetRefs:
+  - group: gateway.kgateway.dev
+    kind: Backend
+    name: httpbin-static
+---
+# Degraded candidate: TLS referencing a Secret that does not exist. Schema-valid,
+# so it passes admission; expected to fail at translation.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: BackendConfigPolicy
+metadata:
+  name: bcp-degraded
+  namespace: httpbin
+spec:
+  targetRefs:
+  - group: gateway.kgateway.dev
+    kind: Backend
+    name: httpbin-static
+  tls:
+    secretRef:
+      name: no-such-tls-secret

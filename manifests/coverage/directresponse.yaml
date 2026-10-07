@@ -1,0 +1,38 @@
+# Healthy: referenced by an HTTPRoute ExtensionRef filter below.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: DirectResponse
+metadata:
+  name: dr-healthy
+  namespace: httpbin
+spec:
+  # `status`, NOT `statusCode`: the Go field is StatusCode but its json tag is
+  # `status`, and the installed CRD exposes spec.{body,bodyFormat,status}.
+  status: 418
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: coverage-directresponse
+  namespace: httpbin
+spec:
+  parentRefs:
+  - name: demo-gateway
+  rules:
+  - matches:
+    - path: { type: PathPrefix, value: /teapot }
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.kgateway.dev
+        kind: DirectResponse
+        name: dr-healthy
+---
+# Degraded candidate: referenced by nothing. EXPECTED Progressing (no ancestor)
+# rather than Degraded -- confirm.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: DirectResponse
+metadata:
+  name: dr-unreferenced
+  namespace: httpbin
+spec:
+  status: 503

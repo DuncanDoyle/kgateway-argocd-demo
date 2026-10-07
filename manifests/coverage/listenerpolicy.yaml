@@ -1,0 +1,25 @@
+# Healthy: attaches to the demo Gateway's listener.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: ListenerPolicy
+metadata:
+  name: lp-healthy
+  namespace: httpbin
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: demo-gateway
+---
+# Degraded candidate: targets a Gateway that does not exist, so no ancestor is
+# written. EXPECTED Progressing, not Degraded -- confirm, and if no Degraded
+# mechanism is found for this kind, record that as the finding.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: ListenerPolicy
+metadata:
+  name: lp-unattached
+  namespace: httpbin
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: no-such-gateway
