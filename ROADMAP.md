@@ -157,7 +157,7 @@ Release gates, carried from phase 1 as known gaps rather than discovered late:
       no longer needed as a fixture source.
 - [ ] Regenerate `healthchecks/argocd-cm-patch.yaml` for all six kinds.
 - [ ] Refresh `docs/evidence/` so the before/after capture covers six kinds.
-- [ ] Write product A's package documentation (see below).
+- [x] Write product A's package documentation ([docs/INSTALL.md](docs/INSTALL.md)).
 
 ## Documentation deliverables
 

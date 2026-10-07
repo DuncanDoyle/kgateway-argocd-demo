@@ -8,6 +8,8 @@ Tracks [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
 For the programme view — phases, what ships to whom, and what is
 deliberately excluded — see [ROADMAP.md](ROADMAP.md).
 
+**Using the health checks:** see [docs/INSTALL.md](docs/INSTALL.md).
+
 ## What this is for
 
 ArgoCD has no health checks for `gateway.kgateway.dev/*` resources, so they
