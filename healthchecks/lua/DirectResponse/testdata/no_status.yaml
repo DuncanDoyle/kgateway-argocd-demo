@@ -1,0 +1,8 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: DirectResponse
+metadata:
+  generation: 1
+  name: dr-unreferenced
+  namespace: httpbin
+spec:
+  status: 503

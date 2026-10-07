@@ -52,17 +52,30 @@ extract() {
   local dir="${SRC}/${kind}/testdata"
   mkdir -p "$dir"
 
-  local json
+  local json target header
+  target="${dir}/${state}.yaml"
   json="$(kubectl -n "$ns" get "$res" -o json)"
 
-  echo "$json" | yq -P eval '
-    del(.metadata.managedFields) |
-    del(.metadata.uid) |
-    del(.metadata.resourceVersion) |
-    del(.metadata.creationTimestamp) |
-    del(.metadata.selfLink) |
-    del(.metadata.annotations)
-  ' - > "${dir}/${state}.yaml"
+  # Preserve a hand-written provenance header: the leading run of '#' lines
+  # in the existing fixture (if any) is re-emitted ahead of the fresh capture,
+  # so annotating a fixture does not make it un-refreshable.
+  header=""
+  if [ -f "$target" ]; then
+    header="$(awk '/^#/ {print; next} {exit}' "$target")"
+  fi
+
+  {
+    [ -n "$header" ] && printf '%s\n' "$header"
+    echo "$json" | yq -P eval '
+      del(.metadata.managedFields) |
+      del(.metadata.uid) |
+      del(.metadata.resourceVersion) |
+      del(.metadata.creationTimestamp) |
+      del(.metadata.selfLink) |
+      del(.metadata.annotations)
+    ' -
+  } > "${target}.tmp"
+  mv "${target}.tmp" "$target"
 
   # An ABSENT status is a legitimate state (e.g. tp-progressing): a policy
   # that attaches to nothing never gets a status subresource written at
@@ -74,10 +87,10 @@ extract() {
     echo "WARNING: no status on ${name}" >&2
   fi
 
-  echo "refreshed ${dir}/${state}.yaml"
+  echo "refreshed ${target}"
 }
 
-echo "==> Refreshing the 5 live-captured fixtures from the cluster (tracked source, not just out/)"
+echo "==> Refreshing the 12 live-captured fixtures from the cluster (tracked source, not just out/)"
 # NOTE: tp-degraded targets an HTTPRoute in httpbin (TrafficPolicy
 # targetRefs have no namespace field, so the policy must be co-located with
 # its target route) -- it lives in DEMO_NS, not SCENARIOS_NS. See
@@ -88,8 +101,20 @@ extract "${DEMO_NS}"      trafficpolicy/add-demo-header TrafficPolicy healthy
 extract "${DEMO_NS}"      trafficpolicy/tp-degraded     TrafficPolicy degraded
 extract "${SCENARIOS_NS}" trafficpolicy/tp-progressing  TrafficPolicy progressing
 
+# Kinds from the coverage probe (see COVERAGE.md). Each second fixture is named
+# after the state actually observed: no_status where the controller writes no
+# status at all, degraded where it is genuinely rejected. lp-degraded-ca is
+# deliberately NOT captured: it is Accepted=True despite its dangling reference.
+extract "${DEMO_NS}" listenerpolicy/lp-healthy            ListenerPolicy      healthy
+extract "${DEMO_NS}" listenerpolicy/lp-degraded-accesslog ListenerPolicy      degraded
+extract "${DEMO_NS}" listenerpolicy/lp-unattached         ListenerPolicy      no_status
+extract "${DEMO_NS}" backendconfigpolicy/bcp-healthy      BackendConfigPolicy healthy
+extract "${DEMO_NS}" backendconfigpolicy/bcp-degraded     BackendConfigPolicy degraded
+extract "${DEMO_NS}" directresponse/dr-healthy            DirectResponse      healthy
+extract "${DEMO_NS}" directresponse/dr-unreferenced       DirectResponse      no_status
+
 echo
-echo "==> Assembling ${OUT} from ${SRC}/ (health.lua, health_test.yaml, testdata/ -- all 11 fixtures: 5 just-refreshed captures + 6 tracked, derived fixtures, untouched above)"
+echo "==> Assembling ${OUT} from ${SRC}/ (health.lua, health_test.yaml, testdata/ -- all fixtures: 12 just-refreshed captures + tracked, derived fixtures, untouched above)"
 rm -rf "$OUT"
 install_shape() {
   local shape="$1"; shift

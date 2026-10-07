@@ -1,0 +1,35 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: BackendConfigPolicy
+metadata:
+  generation: 2
+  name: bcp-degraded
+  namespace: httpbin
+spec:
+  targetRefs:
+    - group: gateway.kgateway.dev
+      kind: Backend
+      name: coverage-backend
+  tls:
+    secretRef:
+      name: no-such-tls-secret
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.kgateway.dev
+        kind: Backend
+        name: coverage-backend
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-10-07T08:20:05Z"
+          message: 'failed to extract TLS data: Secret httpbin/no-such-tls-secret not found'
+          observedGeneration: 2
+          reason: Invalid
+          status: "False"
+          type: Accepted
+        - lastTransitionTime: "2026-10-07T08:20:05Z"
+          message: ""
+          observedGeneration: 2
+          reason: Pending
+          status: "False"
+          type: Attached
+      controllerName: kgateway.dev/kgateway

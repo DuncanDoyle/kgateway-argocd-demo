@@ -36,3 +36,9 @@ tests:
     status: Progressing
     message: "Waiting for TrafficPolicy status"
   inputPath: testdata/stale.yaml
+# conditions-shaped status where ancestors-shaped is expected: must not
+# produce a verdict.
+- healthStatus:
+    status: Progressing
+    message: "Waiting for TrafficPolicy status"
+  inputPath: testdata/wrong_shape.yaml

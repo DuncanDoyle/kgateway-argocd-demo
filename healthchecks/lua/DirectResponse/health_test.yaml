@@ -1,0 +1,10 @@
+tests:
+- healthStatus:
+    status: Healthy
+    message: Policy accepted
+  inputPath: testdata/healthy.yaml
+# An unreferenced DirectResponse gets no status at all.
+- healthStatus:
+    status: Progressing
+    message: "Waiting for DirectResponse status"
+  inputPath: testdata/no_status.yaml

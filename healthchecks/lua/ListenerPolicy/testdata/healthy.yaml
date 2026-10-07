@@ -1,0 +1,32 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: ListenerPolicy
+metadata:
+  generation: 1
+  name: lp-healthy
+  namespace: httpbin
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: demo-gateway
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: demo-gateway
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-10-07T08:17:07Z"
+          message: Policy accepted
+          observedGeneration: 1
+          reason: Valid
+          status: "True"
+          type: Accepted
+        - lastTransitionTime: "2026-10-07T08:17:07Z"
+          message: Attached to all targets
+          observedGeneration: 1
+          reason: Attached
+          status: "True"
+          type: Attached
+      controllerName: kgateway.dev/kgateway

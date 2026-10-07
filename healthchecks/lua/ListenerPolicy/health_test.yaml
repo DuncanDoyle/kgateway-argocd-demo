@@ -1,0 +1,20 @@
+tests:
+- healthStatus:
+    status: Healthy
+    message: Policy accepted
+  inputPath: testdata/healthy.yaml
+- healthStatus:
+    status: Degraded
+    message: 'unresolved backend reference: Service httpbin/no-such-log-service not found'
+  inputPath: testdata/degraded.yaml
+# A policy whose target does not exist gets no status at all.
+- healthStatus:
+    status: Progressing
+    message: "Waiting for ListenerPolicy status"
+  inputPath: testdata/no_status.yaml
+# The foreign ancestor is Invalid but owned by another controller, so the
+# result must be identical to healthy.yaml.
+- healthStatus:
+    status: Healthy
+    message: Policy accepted
+  inputPath: testdata/foreign_controller.yaml

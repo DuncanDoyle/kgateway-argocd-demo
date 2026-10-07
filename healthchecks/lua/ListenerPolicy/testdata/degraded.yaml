@@ -1,0 +1,43 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: ListenerPolicy
+metadata:
+  generation: 1
+  name: lp-degraded-accesslog
+  namespace: httpbin
+spec:
+  default:
+    httpSettings:
+      accessLog:
+        - grpcService:
+            backendRef:
+              group: ""
+              kind: Service
+              name: no-such-log-service
+              port: 9000
+              weight: 1
+            logName: coverage
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: coverage-gateway-log
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: coverage-gateway-log
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-10-07T08:25:52Z"
+          message: 'unresolved backend reference: Service httpbin/no-such-log-service not found'
+          observedGeneration: 1
+          reason: Invalid
+          status: "False"
+          type: Accepted
+        - lastTransitionTime: "2026-10-07T08:25:52Z"
+          message: ""
+          observedGeneration: 1
+          reason: Pending
+          status: "False"
+          type: Attached
+      controllerName: kgateway.dev/kgateway

@@ -1,0 +1,11 @@
+tests:
+# The ancestor here is a Backend, not a Gateway; the shared script filters on
+# controllerName only, so it is unaffected.
+- healthStatus:
+    status: Healthy
+    message: Policy accepted
+  inputPath: testdata/healthy.yaml
+- healthStatus:
+    status: Degraded
+    message: 'failed to extract TLS data: Secret httpbin/no-such-tls-secret not found'
+  inputPath: testdata/degraded.yaml

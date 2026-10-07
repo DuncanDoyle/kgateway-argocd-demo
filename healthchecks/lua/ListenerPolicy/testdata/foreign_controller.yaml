@@ -1,0 +1,55 @@
+# Derived from healthy.yaml with a second ancestor owned by an unrelated
+# controller appended (controllerName example.com/some-other-controller,
+# conditions False/Invalid), to prove the shared script still filters on
+# controllerName once copied to another kind. Everything else is the real capture.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: ListenerPolicy
+metadata:
+  generation: 1
+  name: lp-healthy
+  namespace: httpbin
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: demo-gateway
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: demo-gateway
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-10-07T08:17:07Z"
+          message: Policy accepted
+          observedGeneration: 1
+          reason: Valid
+          status: "True"
+          type: Accepted
+        - lastTransitionTime: "2026-10-07T08:17:07Z"
+          message: Attached to all targets
+          observedGeneration: 1
+          reason: Attached
+          status: "True"
+          type: Attached
+      controllerName: kgateway.dev/kgateway
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: demo-gateway
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-10-07T08:17:07Z"
+          message: Rejected by a controller that does not own this resource
+          observedGeneration: 1
+          reason: Invalid
+          status: "False"
+          type: Accepted
+        - lastTransitionTime: "2026-10-07T08:17:07Z"
+          message: Rejected by a controller that does not own this resource
+          observedGeneration: 1
+          reason: Invalid
+          status: "False"
+          type: Attached
+      controllerName: example.com/some-other-controller

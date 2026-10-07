@@ -1,0 +1,24 @@
+# Synthetic. Not a state kgateway produces: a policy whose status is
+# conditions-shaped instead of ancestors-shaped, i.e. what the ancestors script
+# receives if a kind is wired to the wrong shared script. It must report
+# Progressing rather than inventing a verdict, so the mistake surfaces as a
+# stuck badge rather than a false Healthy.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  generation: 1
+  name: wrong-shape
+  namespace: httpbin
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: httpbin-via-service
+status:
+  conditions:
+  - lastTransitionTime: "2026-10-06T00:00:00Z"
+    message: Policy accepted
+    observedGeneration: 1
+    reason: Valid
+    status: "True"
+    type: Accepted

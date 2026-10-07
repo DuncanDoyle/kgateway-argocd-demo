@@ -1,0 +1,32 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: BackendConfigPolicy
+metadata:
+  generation: 2
+  name: bcp-healthy
+  namespace: httpbin
+spec:
+  targetRefs:
+    - group: gateway.kgateway.dev
+      kind: Backend
+      name: coverage-backend
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.kgateway.dev
+        kind: Backend
+        name: coverage-backend
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-10-07T08:20:05Z"
+          message: Policy accepted
+          observedGeneration: 2
+          reason: Valid
+          status: "True"
+          type: Accepted
+        - lastTransitionTime: "2026-10-07T08:20:05Z"
+          message: Attached to all targets
+          observedGeneration: 2
+          reason: Attached
+          status: "True"
+          type: Attached
+      controllerName: kgateway.dev/kgateway
