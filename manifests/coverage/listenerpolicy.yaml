@@ -50,7 +50,7 @@ spec:
   gatewayClassName: kgateway
   listeners:
   - name: http
-    port: 8082
+    port: 8083
     protocol: HTTP
     allowedRoutes:
       namespaces: { from: Same }
