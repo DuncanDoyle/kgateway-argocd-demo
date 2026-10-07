@@ -23,3 +23,74 @@ spec:
   - group: gateway.networking.k8s.io
     kind: Gateway
     name: no-such-gateway
+---
+# Dedicated Gateways for the Degraded attempts. A failing policy may surface on
+# its target's status (a BackendConfigPolicy does), so these must never target
+# demo-gateway.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: coverage-gateway-ca
+  namespace: httpbin
+spec:
+  gatewayClassName: kgateway
+  listeners:
+  - name: http
+    port: 8081
+    protocol: HTTP
+    allowedRoutes:
+      namespaces: { from: Same }
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: coverage-gateway-log
+  namespace: httpbin
+spec:
+  gatewayClassName: kgateway
+  listeners:
+  - name: http
+    port: 8082
+    protocol: HTTP
+    allowedRoutes:
+      namespaces: { from: Same }
+---
+# Degraded attempt 1: existing Gateway, valid schema, but the CA ConfigMap does
+# not exist (same missing-reference pattern that made BackendConfigPolicy Invalid).
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: ListenerPolicy
+metadata:
+  name: lp-degraded-ca
+  namespace: httpbin
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: coverage-gateway-ca
+  default:
+    clientCertificateValidation:
+      mode: Require
+      caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: no-such-ca-configmap
+---
+# Degraded attempt 2: access log gRPC sink whose backendRef Service does not exist.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: ListenerPolicy
+metadata:
+  name: lp-degraded-accesslog
+  namespace: httpbin
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: coverage-gateway-log
+  default:
+    httpSettings:
+      accessLog:
+      - grpcService:
+          logName: coverage
+          backendRef:
+            name: no-such-log-service
+            port: 9000
