@@ -1,0 +1,14 @@
+# Derived from healthy.yaml with the status block removed entirely — the state
+# between creation and the controller's first write. Must report Progressing,
+# never Healthy: a resource nobody has judged is not a healthy one.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  generation: 1
+  name: httpbin-static
+  namespace: httpbin
+spec:
+  static:
+    hosts:
+      - host: httpbin.httpbin.svc.cluster.local
+        port: 8000

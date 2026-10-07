@@ -11,3 +11,7 @@ tests:
     status: Progressing
     message: "Waiting for Backend status"
   inputPath: testdata/stale.yaml
+- healthStatus:
+    status: Progressing
+    message: "Waiting for Backend status"
+  inputPath: testdata/no_status.yaml

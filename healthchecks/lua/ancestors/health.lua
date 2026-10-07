@@ -1,4 +1,6 @@
--- Health check for gateway.kgateway.dev/TrafficPolicy.
+-- Health check for gateway.kgateway.dev kinds with Gateway API policy-attachment
+-- status: TrafficPolicy, ListenerPolicy, BackendConfigPolicy, DirectResponse.
+-- One byte-identical copy is installed per kind; messages read obj.kind.
 --
 -- Status shape: status.ancestors[].conditions[] (Gateway API policy
 -- attachment, one entry per Gateway/xRoute the policy targets or reaches).
@@ -30,6 +32,17 @@
 -- via the Accepted condition.
 local hs = {}
 
+-- Messages read obj.kind so this one script serves every kind of this status
+-- shape byte-identically. obj.kind is always set on a real cluster object, but
+-- concatenating nil raises a Lua error that would break health evaluation, so
+-- fall back rather than trust it.
+local function kindName()
+  if obj ~= nil and obj.kind ~= nil and obj.kind ~= "" then
+    return obj.kind
+  end
+  return "resource"
+end
+
 local CONTROLLER = "kgateway.dev/kgateway"
 
 -- Reasons that mean "degraded" on either condition type.
@@ -60,7 +73,7 @@ end
 -- same real empty message onto a DEGRADED_REASON branch where it is
 -- actually read (degraded.yaml's own empty message sits on a Pending
 -- condition, which short-circuits before condition.message is ever
--- consulted). Same approach as Backend's health.lua.
+-- consulted). Same approach as the conditions script.
 local function messageOrFallback(condition, fallback)
   if condition.message ~= nil and condition.message ~= "" then
     return condition.message
@@ -110,7 +123,7 @@ if obj.status ~= nil and obj.status.ancestors ~= nil then
   end
   if progressing then
     hs.status = "Progressing"
-    hs.message = "Waiting for TrafficPolicy status"
+    hs.message = "Waiting for " .. kindName() .. " status"
     return hs
   end
   if healthyMsg ~= nil then
@@ -124,5 +137,5 @@ end
 -- (or status is entirely absent). That is not healthy — it must not fall
 -- through to Healthy.
 hs.status = "Progressing"
-hs.message = "Waiting for TrafficPolicy status"
+hs.message = "Waiting for " .. kindName() .. " status"
 return hs

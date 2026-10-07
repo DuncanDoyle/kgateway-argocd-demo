@@ -40,6 +40,7 @@ source ./env.sh
 
 SRC="healthchecks/lua"
 OUT="out/resource_customizations/gateway.kgateway.dev"
+source ./hack/kind-shapes.sh
 
 # extract <namespace> <resource/name> <Kind> <state>
 # Captures a live resource and overwrites the TRACKED fixture at
@@ -90,11 +91,39 @@ extract "${SCENARIOS_NS}" trafficpolicy/tp-progressing  TrafficPolicy progressin
 echo
 echo "==> Assembling ${OUT} from ${SRC}/ (health.lua, health_test.yaml, testdata/ -- all 11 fixtures: 5 just-refreshed captures + 6 tracked, derived fixtures, untouched above)"
 rm -rf "$OUT"
-for kind in Backend TrafficPolicy; do
-  mkdir -p "${OUT}/${kind}"
-  cp "${SRC}/${kind}/health.lua" "${OUT}/${kind}/health.lua"
-  cp "${SRC}/${kind}/health_test.yaml" "${OUT}/${kind}/health_test.yaml"
-  cp -r "${SRC}/${kind}/testdata" "${OUT}/${kind}/testdata"
+install_shape() {
+  local shape="$1"; shift
+  for kind in "$@"; do
+    mkdir -p "${OUT}/${kind}"
+    cp "healthchecks/lua/${shape}/health.lua" "${OUT}/${kind}/health.lua"
+    cp "healthchecks/lua/${kind}/health_test.yaml" "${OUT}/${kind}/health_test.yaml"
+    # testdata/ MUST be copied: health_test.yaml's inputPath entries are
+    # relative to the kind's directory in the generated tree, so omitting it
+    # leaves every test pointing at a file that does not exist.
+    cp -R "healthchecks/lua/${kind}/testdata" "${OUT}/${kind}/testdata"
+  done
+}
+install_shape ancestors ${ANCESTORS_KINDS}
+install_shape conditions ${CONDITIONS_KINDS}
+
+# Guard against a kind being added to healthchecks/lua/ but forgotten in the
+# mapping. Iterate the AUTHORED source directories, not the generated ones:
+# a kind missing from the mapping creates no output directory, so checking
+# the output cannot see it. argo-cd's harness generates no subtests for a
+# directory without health.lua and reports a vacuous pass, so this is the
+# only thing standing between a forgotten kind and silent non-coverage.
+MAPPED=" ${ANCESTORS_KINDS} ${CONDITIONS_KINDS} "
+for src in healthchecks/lua/*/; do
+  kind=$(basename "$src")
+  # Shape directories hold scripts, not fixtures; skip them.
+  [ -f "${src}/health_test.yaml" ] || continue
+  case "${MAPPED}" in
+    *" ${kind} "*) ;;
+    *) echo "ERROR: ${kind} has fixtures but is missing from the shape mapping in hack/kind-shapes.sh" >&2; exit 1 ;;
+  esac
+  for required in health.lua health_test.yaml testdata; do
+    [ -e "${OUT}/${kind}/${required}" ] || { echo "ERROR: ${OUT}/${kind}/${required} missing" >&2; exit 1; }
+  done
 done
 
 echo

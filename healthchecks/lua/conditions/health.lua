@@ -1,4 +1,7 @@
--- Health check for gateway.kgateway.dev/Backend.
+-- Health check for gateway.kgateway.dev kinds with standard metav1.Condition
+-- status: Backend. (GatewayExtension would belong here, but it writes no
+-- status at all on v2.4.5 and is excluded -- see the design.)
+-- One byte-identical copy is installed per kind; messages read obj.kind.
 --
 -- Status shape: status.conditions[] (standard metav1.Condition list).
 -- Two condition types, both owned by kgateway
@@ -13,6 +16,17 @@
 -- recognised condition rather than returning on the first True — returning
 -- early on Accepted=True would report a broken backend as Healthy.
 local hs = {}
+
+-- Messages read obj.kind so this one script serves every kind of this status
+-- shape byte-identically. obj.kind is always set on a real cluster object, but
+-- concatenating nil raises a Lua error that would break health evaluation, so
+-- fall back rather than trust it.
+local function kindName()
+  if obj ~= nil and obj.kind ~= nil and obj.kind ~= "" then
+    return obj.kind
+  end
+  return "resource"
+end
 
 local RECOGNISED = { Accepted = true, EndpointsDiscovered = true }
 
@@ -29,12 +43,9 @@ local function isStale(obj, condition)
 end
 
 -- kgateway has been observed writing message: "" on policy conditions (see
--- TrafficPolicy's Attached/Pending condition in ../TrafficPolicy/health.lua)
--- -- not observed on Backend specifically, but the same writer code paths
--- are plausibly shared, and the guard costs nothing to keep here too. In
--- Lua the empty string is truthy, so `condition.message or fallback` would
--- still pick "" and the health badge would render blank. Skip empty
--- messages explicitly and fall back to a synthesized description instead.
+-- the ancestors script's testdata/overridden_empty_message.yaml). In Lua the
+-- empty string is truthy, so `condition.message or fallback` would still pick
+-- "" and the health badge would render blank. Skip empty messages explicitly.
 local function messageOrFallback(condition, fallback)
   if condition.message ~= nil and condition.message ~= "" then
     return condition.message
@@ -72,7 +83,7 @@ if obj.status ~= nil and obj.status.conditions ~= nil then
   end
   if sawStale then
     hs.status = "Progressing"
-    hs.message = "Waiting for Backend status"
+    hs.message = "Waiting for " .. kindName() .. " status"
     return hs
   end
   if healthyMsg ~= nil then
@@ -83,5 +94,5 @@ if obj.status ~= nil and obj.status.conditions ~= nil then
 end
 
 hs.status = "Progressing"
-hs.message = "Waiting for Backend status"
+hs.message = "Waiting for " .. kindName() .. " status"
 return hs
