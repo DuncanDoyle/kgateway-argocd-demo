@@ -71,8 +71,8 @@ cd <path-to-argo-cd-clone>
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'
 ```
 
-`install-to-argocd.sh` reads the clone location from `ARGOCD_DIR` (default
-`~/Development/github/argo-cd`), refuses an empty source, and syncs only the
+`install-to-argocd.sh` reads the clone location from `ARGOCD_DIR` (the script
+sets a default; override it for your clone), refuses an empty source, and syncs only the
 `resource_customizations/gateway.kgateway.dev` directory, so uncommitted work
 elsewhere in the clone is never touched. Prefer it over a manual `cp -r`, which
 leaves stale files behind when a fixture is removed.

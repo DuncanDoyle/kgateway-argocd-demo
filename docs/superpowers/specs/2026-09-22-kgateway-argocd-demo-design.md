@@ -337,5 +337,5 @@ Either way this is not evidence of a `Backend` status gap — an earlier draft o
 
 ## Resolved questions
 
-- **Repo location on disk.** The demo repo lives at `~/Development/github/kgateway-argocd-demo`, alongside the other demo repos. The design doc moves with it.
+- **Repo location on disk.** The demo repo lives at `<demo-repo>`, alongside the other demo repos. The design doc moves with it.
 - **Gateway health on plain minikube — not an issue.** `Programmed` defaults to `True` unless translation explicitly sets it False (`pkg/reports/status.go:630`); the only False paths are listener/filter-chain validation errors and misuse of `spec.addresses`, and `AddressNotAssigned` appears nowhere in kgateway. The LoadBalancer address populates `status.addresses` only (`pkg/kgateway/controller/gw_controller.go:390-410`), and ArgoCD's built-in Gateway check reads only `ResolvedRefs`, `Accepted` and `Programmed` — never `addresses`. The Gateway therefore reports Healthy on plain minikube with the Service pending; `minikube tunnel` affects reachability, not status.

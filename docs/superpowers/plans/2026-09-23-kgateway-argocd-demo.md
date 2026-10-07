@@ -12,14 +12,14 @@
 
 ## Global Constraints
 
-- **Repo:** `DuncanDoyle/kgateway-argocd-demo` — already created and public. Local path `~/Development/github/kgateway-argocd-demo`.
+- **Repo:** `DuncanDoyle/kgateway-argocd-demo` — already created and public. Local path `<demo-repo>`.
   - **Push remote (SSH):** `git@github.com:DuncanDoyle/kgateway-argocd-demo.git`
   - **`REPO_URL` for ArgoCD (HTTPS):** `https://github.com/DuncanDoyle/kgateway-argocd-demo.git` — ArgoCD pulls anonymously and cannot use an SSH URL without a key Secret, which this demo deliberately avoids. These two are NOT interchangeable.
 - **Gateway API:** `v1.6.1`, Standard channel. Must be installed **before** kgateway — no kgateway chart bundles these CRDs.
 - **kgateway:** `v2.4.5`, charts `oci://cr.kgateway.dev/kgateway-dev/charts/kgateway-crds` and `oci://cr.kgateway.dev/kgateway-dev/charts/kgateway`, namespace `kgateway-system`. (OCI path and version verified 2026-09-23.)
 - **Argo CD:** chart `argo-cd` version `10.9.2` from `https://argoproj.github.io/argo-helm`, namespace `argocd`, installed with `timeout.reconciliation: 10s`.
 - **Workload image:** `docker.io/mccutchen/go-httpbin:v2.9.2@sha256:8b27c0fcea0d386992f26d33c0eaadf1709e759f9d3e8b6622d276d10d0569fe` (digest verified 2026-09-23). go-httpbin listens on **8080**; the Service exposes **8000**.
-- **argo-cd clone** for the test harness: `~/Development/github/argo-cd`, SHA `a770f6f6019205ca66dcf2eaea6a6c244fb16bad`. Record the SHA in the README next to the test run.
+- **argo-cd clone** for the test harness: `<argo-cd-clone>`, SHA `a770f6f6019205ca66dcf2eaea6a6c244fb16bad`. Record the SHA in the README next to the test run.
 - **Cluster:** minikube primary, but no minikube-only assumptions. Gateway reached via `kubectl port-forward`.
 - **Never hand-author a fixture and present it as cluster-extracted.** Fixtures come from `kubectl get -o yaml`. The single possible exception is `backend-stale`, and only after capture is attempted and fails (Task 5).
 - **Scope is a partial contribution.** kgateway#13871 stays open. Do not write checks for `HTTPListenerPolicy` (deprecated in v2.4.5, absent from `main`) or `GatewayParameters` (no status).
@@ -30,9 +30,9 @@
 ### Task 1: Repository skeleton and pinned configuration
 
 **Files:**
-- Create: `~/Development/github/kgateway-argocd-demo/env.sh`
-- Create: `~/Development/github/kgateway-argocd-demo/.gitignore`
-- Create: `~/Development/github/kgateway-argocd-demo/README.md`
+- Create: `<demo-repo>/env.sh`
+- Create: `<demo-repo>/.gitignore`
+- Create: `<demo-repo>/README.md`
 - Move: `docs/superpowers/specs/2026-09-22-kgateway-argocd-demo-design.md` and `docs/superpowers/plans/2026-09-23-kgateway-argocd-demo.md` into the new repo, preserving paths
 
 **Interfaces:**
@@ -42,8 +42,8 @@
 - [ ] **Step 1: Create the repo directory and initialise git**
 
 ```bash
-mkdir -p ~/Development/github/kgateway-argocd-demo
-cd ~/Development/github/kgateway-argocd-demo
+mkdir -p <demo-repo>
+cd <demo-repo>
 git init -b main
 ```
 
@@ -137,18 +137,18 @@ All pins live in [`env.sh`](env.sh). See that file for the authoritative list.
 - [ ] **Step 5: Move the spec and plan into the repo**
 
 ```bash
-mkdir -p ~/Development/github/kgateway-argocd-demo/docs/superpowers/specs
-mkdir -p ~/Development/github/kgateway-argocd-demo/docs/superpowers/plans
-cp /Users/ddoyle/Development/claude/gh_kgw-13871-argocd-claude/docs/superpowers/specs/2026-09-22-kgateway-argocd-demo-design.md \
-   ~/Development/github/kgateway-argocd-demo/docs/superpowers/specs/
-cp /Users/ddoyle/Development/claude/gh_kgw-13871-argocd-claude/docs/superpowers/plans/2026-09-23-kgateway-argocd-demo.md \
-   ~/Development/github/kgateway-argocd-demo/docs/superpowers/plans/
+mkdir -p <demo-repo>/docs/superpowers/specs
+mkdir -p <demo-repo>/docs/superpowers/plans
+cp <authoring-workspace>/docs/superpowers/specs/2026-09-22-kgateway-argocd-demo-design.md \
+   <demo-repo>/docs/superpowers/specs/
+cp <authoring-workspace>/docs/superpowers/plans/2026-09-23-kgateway-argocd-demo.md \
+   <demo-repo>/docs/superpowers/plans/
 ```
 
 - [ ] **Step 6: Verify `env.sh` sources cleanly and exports what later scripts need**
 
 ```bash
-cd ~/Development/github/kgateway-argocd-demo
+cd <demo-repo>
 bash -c 'source ./env.sh && for v in REPO_URL GWAPI_MANIFEST KGATEWAY_CHART ARGOCD_CHART_VERSION HTTPBIN_IMAGE DEMO_NS SCENARIOS_NS; do
   [ -n "${!v}" ] || { echo "MISSING: $v"; exit 1; }
   echo "$v=${!v}"
@@ -163,7 +163,7 @@ The repo already exists and is public — do NOT run `gh repo create`. Add the
 SSH remote and push.
 
 ```bash
-cd ~/Development/github/kgateway-argocd-demo
+cd <demo-repo>
 git add .
 git commit -m "feat: repo skeleton with pinned versions"   # skip if already committed
 git remote add origin git@github.com:DuncanDoyle/kgateway-argocd-demo.git
@@ -187,8 +187,8 @@ Expected: a SHA printed, no credential prompt.
 ### Task 2: Cluster bootstrap script
 
 **Files:**
-- Create: `~/Development/github/kgateway-argocd-demo/setup.sh`
-- Create: `~/Development/github/kgateway-argocd-demo/teardown.sh`
+- Create: `<demo-repo>/setup.sh`
+- Create: `<demo-repo>/teardown.sh`
 
 **Interfaces:**
 - Consumes: every variable from `env.sh` (Task 1)
@@ -1018,7 +1018,7 @@ git push
 **Files:**
 - Create: `healthchecks/lua/Backend/health.lua`
 - Create: `healthchecks/lua/Backend/health_test.yaml`
-- Test: `~/Development/github/argo-cd/util/lua/health_test.go` (existing harness, not modified)
+- Test: `<argo-cd-clone>/util/lua/health_test.go` (existing harness, not modified)
 
 **Interfaces:**
 - Consumes: fixtures from Task 5
@@ -1032,7 +1032,7 @@ The expected messages in `health_test.yaml` must be what the controller
 actually wrote, not what we assume.
 
 ```bash
-cd ~/Development/github/kgateway-argocd-demo
+cd <demo-repo>
 for f in out/resource_customizations/gateway.kgateway.dev/Backend/testdata/*.yaml; do
   echo "=== $f ==="
   python3 -c "
@@ -1070,8 +1070,8 @@ tests:
 
 ```bash
 cp -r out/resource_customizations/gateway.kgateway.dev \
-      ~/Development/github/argo-cd/resource_customizations/
-cd ~/Development/github/argo-cd
+      <argo-cd-clone>/resource_customizations/
+cd <argo-cd-clone>
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'
 ```
 
@@ -1083,7 +1083,7 @@ directory holding just `testdata/` and `health_test.yaml` yields "no tests to ru
 — a vacuous pass, not RED. To get a genuine failing run, drop in a stub first:
 
 ```bash
-echo 'return {}' > ~/Development/github/argo-cd/resource_customizations/gateway.kgateway.dev/Backend/health.lua
+echo 'return {}' > <argo-cd-clone>/resource_customizations/gateway.kgateway.dev/Backend/health.lua
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev/Backend'
 ```
 
@@ -1173,10 +1173,10 @@ return hs
 - [ ] **Step 5: Copy the script in and run the test to see it pass**
 
 ```bash
-cd ~/Development/github/kgateway-argocd-demo
+cd <demo-repo>
 cp healthchecks/lua/Backend/health.lua \
-   ~/Development/github/argo-cd/resource_customizations/gateway.kgateway.dev/Backend/health.lua
-cd ~/Development/github/argo-cd
+   <argo-cd-clone>/resource_customizations/gateway.kgateway.dev/Backend/health.lua
+cd <argo-cd-clone>
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev/Backend'
 ```
 
@@ -1187,7 +1187,7 @@ the Lua to produce a message the controller never wrote.
 - [ ] **Step 6: Commit**
 
 ```bash
-cd ~/Development/github/kgateway-argocd-demo
+cd <demo-repo>
 git add healthchecks/lua/Backend/health.lua healthchecks/lua/Backend/health_test.yaml
 git commit -m "feat: Backend health check with condition aggregation"
 git push
@@ -1209,7 +1209,7 @@ git push
 - [ ] **Step 1: Read the real messages and controllerName from the fixtures**
 
 ```bash
-cd ~/Development/github/kgateway-argocd-demo
+cd <demo-repo>
 for f in out/resource_customizations/gateway.kgateway.dev/TrafficPolicy/testdata/*.yaml; do
   echo "=== $f ==="
   python3 -c "
@@ -1354,8 +1354,8 @@ tests:
 
 ```bash
 cp -r out/resource_customizations/gateway.kgateway.dev \
-      ~/Development/github/argo-cd/resource_customizations/
-cd ~/Development/github/argo-cd
+      <argo-cd-clone>/resource_customizations/
+cd <argo-cd-clone>
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev/TrafficPolicy'
 ```
 
@@ -1364,7 +1364,7 @@ rather than RED — the harness only creates subtests for directories that have 
 Drop in an untracked stub to force a genuine failing run:
 
 ```bash
-echo 'return {}' > ~/Development/github/argo-cd/resource_customizations/gateway.kgateway.dev/TrafficPolicy/health.lua
+echo 'return {}' > <argo-cd-clone>/resource_customizations/gateway.kgateway.dev/TrafficPolicy/health.lua
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev/TrafficPolicy'
 ```
 
@@ -1481,10 +1481,10 @@ return hs
 - [ ] **Step 6: Copy in and run the test to see it pass**
 
 ```bash
-cd ~/Development/github/kgateway-argocd-demo
+cd <demo-repo>
 cp healthchecks/lua/TrafficPolicy/health.lua \
-   ~/Development/github/argo-cd/resource_customizations/gateway.kgateway.dev/TrafficPolicy/health.lua
-cd ~/Development/github/argo-cd
+   <argo-cd-clone>/resource_customizations/gateway.kgateway.dev/TrafficPolicy/health.lua
+cd <argo-cd-clone>
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'
 ```
 
@@ -1493,7 +1493,7 @@ Expected: PASS for every fixture in both kinds.
 - [ ] **Step 7: Commit**
 
 ```bash
-cd ~/Development/github/kgateway-argocd-demo
+cd <demo-repo>
 git add healthchecks/lua/TrafficPolicy/health.lua healthchecks/lua/TrafficPolicy/health_test.yaml
 git commit -m "feat: TrafficPolicy health check with reason branching and controller scoping"
 git push
@@ -1608,8 +1608,8 @@ git push
 
 **Files:**
 - Modify: `README.md` (add verification + upstream sections)
-- Create: files under `~/Development/github/argo-cd/resource_customizations/gateway.kgateway.dev/` (in a branch of that clone)
-- Modify: `~/Development/github/argo-cd/docs/operator-manual/upgrading/overview.md`
+- Create: files under `<argo-cd-clone>/resource_customizations/gateway.kgateway.dev/` (in a branch of that clone)
+- Modify: `<argo-cd-clone>/docs/operator-manual/upgrading/overview.md`
 
 **Interfaces:**
 - Consumes: everything from Tasks 5-8
@@ -1618,7 +1618,7 @@ git push
 - [ ] **Step 1: Confirm the local argo-cd clone is current before citing it**
 
 ```bash
-cd ~/Development/github/argo-cd
+cd <argo-cd-clone>
 git log -1 --format='%H %cd' HEAD
 gh api repos/argoproj/argo-cd/commits/master --jq '.sha'
 ```
@@ -1629,7 +1629,7 @@ a fixture that passes on a stale clone proves nothing about current master.
 - [ ] **Step 2: Run the full harness, not just our subtests**
 
 ```bash
-cd ~/Development/github/argo-cd
+cd <argo-cd-clone>
 go test -v ./util/lua/
 ```
 
@@ -1649,7 +1649,7 @@ Append under *Custom Healthchecks Added* in
 - [ ] **Step 4: Open the upstream PR**
 
 ```bash
-cd ~/Development/github/argo-cd
+cd <argo-cd-clone>
 git checkout -b feat/kgateway-health-checks
 git add resource_customizations/gateway.kgateway.dev docs/operator-manual/upgrading/overview.md
 git commit -m "feat(health): add health checks for gateway.kgateway.dev Backend and TrafficPolicy"
@@ -1715,7 +1715,7 @@ kubectl -n argocd patch configmap argocd-cm \
 - [ ] **Step 7: Commit**
 
 ```bash
-cd ~/Development/github/kgateway-argocd-demo
+cd <demo-repo>
 git add README.md
 git commit -m "docs: verification and argocd-cm usage"
 git push
