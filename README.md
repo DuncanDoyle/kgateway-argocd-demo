@@ -65,6 +65,10 @@ Verified against argo-cd `1db740c1fa7854052c554742d4d6baaa2663c952`
 checks don't regress anything else in the harness. Re-verified 2026-09-24
 following the exact steps above from a fresh clone of this repo.
 
+### Regenerating the before/after evidence
+
+`./hack/capture-evidence.sh` removes every health key from `argocd-cm`, captures `docs/evidence/before.txt` (asserting every health status is empty), applies the patch, and captures `after.txt` (asserting every status is non-empty). It hard-refreshes the Applications each time because they cache per-resource health and ignore an `argocd-cm` change until refreshed, so a plain sleep yields plausible but stale statuses.
+
 ### Reproducibility guard
 
 `healthchecks/` holds generated artefacts (captured fixtures and the
