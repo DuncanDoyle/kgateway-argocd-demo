@@ -25,11 +25,19 @@ DirectResponse/dr-healthy                  (none)        Healthy
 
 ## Install
 
+**What has been tested.** Executed live: the install, the removal, hard refresh, and the UI-visible result via the Application status. Not executed: the argo-helm (`configs.cm`, `configs.params`) paths, behaviour with `controller.resource.health.persist` unset, the `curl` alternative, and the controller-restart steps. Treat those as higher risk.
+
 You need `kubectl` access to the namespace ArgoCD runs in (`argocd` below) and a copy of the patch file, which is checked into this repo:
 
 ```bash
 git clone https://github.com/DuncanDoyle/kgateway-argocd-demo.git
 cd kgateway-argocd-demo
+
+# Pin to the commit this guide was verified against; `main` may move.
+git checkout d034785778416113695a3f7b2f339bbd6c14f2e5
+
+# This file contains Lua that will run inside your ArgoCD. Read it first.
+less healthchecks/argocd-cm-patch.yaml
 
 # Adds five resource.customizations.health.gateway.kgateway.dev_<Kind> keys
 # to argocd-cm. A merge patch: your other argocd-cm keys are untouched.
@@ -37,7 +45,7 @@ kubectl -n argocd patch configmap argocd-cm \
   --patch-file healthchecks/argocd-cm-patch.yaml
 ```
 
-Without cloning, download just the file: `curl -sLO https://raw.githubusercontent.com/DuncanDoyle/kgateway-argocd-demo/main/healthchecks/argocd-cm-patch.yaml`.
+Without cloning, download just the file: `curl -sLO https://raw.githubusercontent.com/DuncanDoyle/kgateway-argocd-demo/d034785778416113695a3f7b2f339bbd6c14f2e5/healthchecks/argocd-cm-patch.yaml`. Either way, review the file before applying it: it is Lua executed by your ArgoCD application controller.
 
 ArgoCD reads `argocd-cm` live, so nothing needs restarting. But **Applications cache per-resource health and do not re-evaluate it when `argocd-cm` changes**; badges stay blank until the next reconcile, which can be minutes away. Force it:
 
@@ -48,6 +56,8 @@ kubectl -n argocd annotate application <your-app> \
 ```
 
 (In the UI: the Application's Refresh button, "Hard Refresh".) Within a few seconds the badges appear.
+
+Overrides in `argocd-cm` take precedence over anything ArgoCD later bundles, so read [When it is safe to remove](#when-it-is-safe-to-remove) before you forget these are installed.
 
 If you manage `argocd-cm` declaratively (the argo-helm chart, a GitOps repo, Kustomize), the patch will be reverted the next time that source is applied. Put the five keys in that source instead; for argo-helm they go under `configs.cm`.
 
@@ -78,7 +88,7 @@ The checks read only conditions written by the kgateway controller (`controllerN
 | State | Meaning | Typical causes |
 |---|---|---|
 | **Healthy** | kgateway accepted the resource (`Accepted=True`) and, for policies, attached it (`Attached=True`). | Normal operation. |
-| **Degraded** | kgateway rejected the resource, or part of it: a condition with reason `Invalid`, `PartiallyValid` or `Overridden`, or any other `False` condition. For `Backend`, any failing `Accepted` or `EndpointsDiscovered` condition. | A reference to a Secret or Service that does not exist (for example `BackendConfigPolicy.spec.tls.secretRef`, or a `ListenerPolicy` access log backend); an invalid spec; a policy overridden by another. |
+| **Degraded** | kgateway rejected the resource, or part of it: a condition with reason `Invalid`, `PartiallyValid` or `Overridden`, or any other `False` condition except `Pending`. For `Backend`, any failing `Accepted` or `EndpointsDiscovered` condition. | A reference to a Secret or Service that does not exist (for example `BackendConfigPolicy.spec.tls.secretRef`, or a `ListenerPolicy` access log backend); an invalid spec; a policy overridden by another. |
 | **Progressing** | kgateway has not reached a verdict yet. Reason `Pending`; status that describes an older `metadata.generation` than the current spec; or no status at all. | Just applied, or just edited. Also **a policy that attaches to nothing**: a `ListenerPolicy` targeting a Gateway that does not exist, or a `DirectResponse` no route references, gets no `status` from kgateway and so stays Progressing indefinitely. |
 
 Two things worth knowing:
@@ -101,7 +111,7 @@ kubectl -n argocd get application <your-app> \
   -o jsonpath='{range .status.resources[?(@.group=="gateway.kgateway.dev")]}{.kind}{"/"}{.name}{" -> "}{.health.status}{"\n"}{end}'
 ```
 
-This path reads `Application.status.resources[].health`, and **ArgoCD does not write that field by default**. Its default (`resourceHealthSource: appTree`) keeps per-resource health only in the UI's resource tree. With the default, the command above prints every resource with an empty health, whether or not the checks work. Do not read that as a failed install.
+This path reads `Application.status.resources[].health`, and **ArgoCD does not write that field by default** (true of ArgoCD 3.x, which is what this was verified on, chart 10.9.2; 2.x defaulted the other way, so on 2.x you may not need the setting). The 3.x default (`resourceHealthSource: appTree`) keeps per-resource health only in the UI's resource tree. With the default, the command above prints every resource with an empty health, whether or not the checks work. Do not read that as a failed install.
 
 To make the CLI path work, enable persistence in `argocd-cmd-params-cm` and restart the application controller:
 
@@ -116,7 +126,7 @@ kubectl -n argocd rollout status statefulset argo-cd-argocd-application-controll
 
 ## When it is safe to remove
 
-These entries are an override, and they stay valid after ArgoCD ships its own kgateway checks. If or when that happens (an upstream change is planned, tracked in [#13871](https://github.com/kgateway-dev/kgateway/issues/13871)), you have a choice:
+These entries are an override, and they stay valid after ArgoCD ships its own kgateway checks. The intent is to propose these checks upstream to `argoproj/argo-cd`, but nothing is filed or scheduled yet, so there is no release to wait for. If and when ArgoCD does ship kgateway checks, you have a choice:
 
 - **Do nothing.** Your `argocd-cm` entries keep working indefinitely.
 - **Switch to ArgoCD's bundled checks**, by deleting these keys. Check the release notes of the ArgoCD version you run, confirm it includes `gateway.kgateway.dev` checks, then:
