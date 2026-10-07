@@ -20,12 +20,12 @@
 --     (pkg/pluginsdk/statussync/writer.go MergePolicyAncestorStatuses), so
 --     an unfiltered check would report another controller's verdict as ours.
 --
--- Reasons observed on real clusters (see testdata/):
+-- Reasons observed on real clusters (see the TrafficPolicy fixtures):
 --   Accepted: Valid | PartiallyValid | Invalid | Pending
 --   Attached: Attached | Merged | Overridden | Invalid | Pending
 --
 -- Attached=False/Pending is deliberately Progressing, not Degraded: it is
--- the steady companion of Accepted=False/Invalid (see testdata/degraded.yaml),
+-- the steady companion of Accepted=False/Invalid (see the TrafficPolicy degraded fixture),
 -- but also the shape of a policy that is genuinely mid-attachment. Precedence
 -- below (Degraded > Progressing > Healthy) means a resource with both
 -- Accepted=False/Invalid and Attached=False/Pending still comes out Degraded,
@@ -57,13 +57,13 @@ local function isStale(obj, condition)
 end
 
 -- kgateway has been observed writing message: "" on some conditions (see
--- testdata/degraded.yaml's Attached/Pending condition). In Lua the empty
+-- the TrafficPolicy degraded fixture's Attached/Pending condition). In Lua the empty
 -- string is truthy, so `condition.message or fallback` would still pick ""
 -- and the health badge would render blank. Skip empty messages explicitly
 -- and fall back to a synthesized description instead. The guard itself is
--- exercised by testdata/overridden_empty_message.yaml, which relocates that
+-- exercised by the TrafficPolicy overridden_empty_message fixture, which relocates that
 -- same real empty message onto a DEGRADED_REASON branch where it is
--- actually read (degraded.yaml's own empty message sits on a Pending
+-- actually read (the degraded fixture's own empty message sits on a Pending
 -- condition, which short-circuits before condition.message is ever
 -- consulted). Same approach as the conditions script.
 local function messageOrFallback(condition, fallback)

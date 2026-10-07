@@ -35,7 +35,7 @@ local function isStale(obj, condition)
 end
 
 -- kgateway has been observed writing message: "" on policy conditions (see
--- the ancestors script's testdata/overridden_empty_message.yaml). In Lua the
+-- the TrafficPolicy overridden_empty_message fixture). In Lua the
 -- empty string is truthy, so `condition.message or fallback` would still pick
 -- "" and the health badge would render blank. Skip empty messages explicitly.
 local function messageOrFallback(condition, fallback)
