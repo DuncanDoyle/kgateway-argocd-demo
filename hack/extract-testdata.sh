@@ -180,7 +180,11 @@ extract "${DEMO_NS}" directresponse/dr-unreferenced       DirectResponse      no
   # Say so on success too: a silent assertion is indistinguishable from one
   # that never ran. These three are expected, not a problem -- hence no
   # "WARNING", which would cry wolf on every single run.
-  echo "no status on $(printf '%s' "${saw}" | wc -w | tr -d ' ') resources, as expected: ${saw}"
+  #
+  # stderr, not stdout: check-generated.sh runs this script with >/dev/null to
+  # keep its own output quiet, so a check result on stdout would be discarded
+  # exactly where it matters most.
+  echo "no status on $(printf '%s' "${saw}" | wc -w | tr -d ' ') resources, as expected: ${saw}" >&2
 fi
 
 echo
