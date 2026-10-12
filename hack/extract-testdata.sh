@@ -125,10 +125,20 @@ extract() {
     local name
     name="$(echo "$json" | yq '.metadata.name' -)"
     echo "WARNING: no status on ${name}" >&2
+    SAW_NO_STATUS="${SAW_NO_STATUS}${name} "
   fi
 
   echo "refreshed ${target}"
 }
+
+# An absent status subresource is a legitimate captured state, but it is also
+# what a broken capture looks like -- a renamed resource, a kubectl that
+# returned something unexpected -- and it would silently become a fixture
+# asserting nothing. So the set is pinned here as a literal rather than merely
+# warned about. Update it in the same commit that adds or removes such a
+# resource, which puts the change in front of a reviewer.
+EXPECT_NO_STATUS="dr-unreferenced lp-unattached tp-progressing"
+SAW_NO_STATUS=""
 
 if [ "${SKIP_REFRESH:-0}" = "1" ]; then
   echo "==> SKIP_REFRESH=1: skipping the 12 live captures; assembling from the committed fixtures"
@@ -155,6 +165,18 @@ extract "${DEMO_NS}" backendconfigpolicy/bcp-healthy      BackendConfigPolicy he
 extract "${DEMO_NS}" backendconfigpolicy/bcp-degraded     BackendConfigPolicy degraded
 extract "${DEMO_NS}" directresponse/dr-healthy            DirectResponse      healthy
 extract "${DEMO_NS}" directresponse/dr-unreferenced       DirectResponse      no_status
+
+  # Compare as sorted sets, so capture order never matters.
+  saw="$(printf '%s' "${SAW_NO_STATUS}" | tr ' ' '\n' | grep -v '^$' | sort | tr '\n' ' ' | sed 's/ $//')"
+  if [ "${saw}" != "${EXPECT_NO_STATUS}" ]; then
+    echo "ERROR: resources with no status changed." >&2
+    echo "  expected: ${EXPECT_NO_STATUS}" >&2
+    echo "  observed: ${saw:-<none>}" >&2
+    echo "  A resource that lost its status is a kgateway behaviour change; one that" >&2
+    echo "  gained it means a fixture now captures something different. Either way," >&2
+    echo "  re-read COVERAGE.md before updating EXPECT_NO_STATUS." >&2
+    exit 1
+  fi
 fi
 
 echo

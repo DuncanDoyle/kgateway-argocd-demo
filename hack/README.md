@@ -130,4 +130,6 @@ Without this, a rebuilt cluster produces a four-file diff that means nothing —
 
 **`install-to-argocd.sh` refuses a source containing no `health.lua`.** It uses `rsync --delete`, so an empty `out/` after a half-failed generator run would not merely be useless — it would wipe the destination, including uncommitted work in your argo-cd clone.
 
+**The set of resources with no status is pinned as a literal (`EXPECT_NO_STATUS`).** Three resources legitimately carry no `status` subresource at all — `tp-progressing`, `lp-unattached`, `dr-unreferenced` — because kgateway writes nothing for a policy that attached to nothing, not even an empty list. Those absences *are* three of the fixtures. But an absent status is also what a broken capture looks like, and it would silently become a fixture asserting nothing, so the script warns on each and then fails if the set is not exactly those three. A resource that lost its status is a kgateway behaviour change; one that gained it means a fixture now captures something else.
+
 **`capture-evidence.sh` asserts its capture count as a literal (`EXPECTED_RESOURCES=14`).** Repo-wide convention: every assertion over a collection first asserts the collection is non-empty. "All statuses are empty" is trivially true of zero statuses.
