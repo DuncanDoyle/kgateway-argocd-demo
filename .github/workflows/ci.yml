@@ -56,12 +56,42 @@ jobs:
       - name: Install it into the argo-cd checkout
         run: ARGOCD_DIR="${GITHUB_WORKSPACE}/argo-cd" ./hack/install-to-argocd-clone.sh
 
-      - name: Run the harness
+      # Delivery route decides whether the script gets Lua's standard
+      # libraries, so both paths are exercised.
+      - name: Run the harness — bundled delivery (standard libraries enabled)
         working-directory: argo-cd
         run: |
           set -o pipefail
           go test ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev' -v \
             2>&1 | tee /tmp/harness.out
+
+      # This is the path that matters today: we ship through argocd-cm, where
+      # ArgoCD runs the Lua with useOpenLibs FALSE -- base, table and a stubbed
+      # os only, so string.* and math.* do not exist. health_test.go hardcodes
+      # `UseOpenLibs: true`, which is the BUNDLED path, so the step above
+      # cannot catch a script that reaches for string.format: it would pass CI
+      # and then fail in every user's cluster.
+      #
+      # Verified 2026-10-12 in both directions: injecting
+      # `string.format("%s", hs.message)` into Backend/health.lua passes the
+      # step above and fails this one with "attempt to index a non-table
+      # object(nil) with key 'format'".
+      - name: Run the harness — argocd-cm delivery (standard libraries disabled)
+        working-directory: argo-cd
+        run: |
+          set -o pipefail
+          # Guard the patch. If upstream reformats this line the sed becomes a
+          # no-op, and we would silently run the same test twice -- the exact
+          # vacuous pass this job exists to prevent.
+          n=$(grep -cE '^[[:space:]]+UseOpenLibs: true,$' util/lua/health_test.go || true)
+          if [ "$n" -ne 1 ]; then
+            echo "::error::expected exactly 1 'UseOpenLibs: true' in util/lua/health_test.go, found ${n}" >&2
+            exit 1
+          fi
+          sed -i -E 's/^([[:space:]]+)UseOpenLibs: true,$/\1UseOpenLibs: false,/' util/lua/health_test.go
+          grep -qE '^[[:space:]]+UseOpenLibs: false,$' util/lua/health_test.go
+          go test ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev' -v \
+            2>&1 | tee /tmp/harness-restricted.out
 
       # The harness generates NO subtests for a kind whose directory lacks a
       # health.lua, and then reports a cheerful "ok" -- a vacuous pass. So
@@ -70,12 +100,16 @@ jobs:
       # Note the leading whitespace in the pattern: Go indents subtest result
       # lines, so an anchored '^--- PASS' matches NOTHING here and would itself
       # be a vacuous assertion (verified: it returns 0, not 21).
-      - name: Assert every fixture ran
+      - name: Assert every fixture ran, on both delivery paths
         run: |
           EXPECTED=21
-          n=$(grep -cE '^[[:space:]]+--- PASS: TestLuaHealthScript/gateway\.kgateway\.dev/' /tmp/harness.out || true)
-          echo "passed subtests: ${n} (expected ${EXPECTED})"
-          if [ "$n" -ne "$EXPECTED" ]; then
-            echo "::error::expected ${EXPECTED} passing fixtures, saw ${n}" >&2
-            exit 1
-          fi
+          rc=0
+          for f in /tmp/harness.out /tmp/harness-restricted.out; do
+            n=$(grep -cE '^[[:space:]]+--- PASS: TestLuaHealthScript/gateway\.kgateway\.dev/' "$f" || true)
+            echo "$(basename "$f"): ${n} passing subtests (expected ${EXPECTED})"
+            if [ "$n" -ne "$EXPECTED" ]; then
+              echo "::error::${f}: expected ${EXPECTED} passing fixtures, saw ${n}" >&2
+              rc=1
+            fi
+          done
+          exit $rc
