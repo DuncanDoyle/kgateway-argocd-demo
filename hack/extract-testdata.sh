@@ -37,6 +37,11 @@
 # no YAML-parsing edge cases) and let `yq -P` convert JSON -> YAML while
 # deleting the noisy fields with a single `del()` expression. Output stays
 # YAML, as argo-cd's fixtures require.
+# SKIP_REFRESH=1 skips the 12 live captures and assembles the tree from the
+# fixtures already committed under healthchecks/lua/<Kind>/testdata/. That makes
+# this script runnable with no cluster and no kubectl -- which is what lets CI
+# verify the Lua and the generated patch. The refresh is the ONLY part that
+# needs a cluster; assembly is pure file copying.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -105,6 +110,9 @@ extract() {
   echo "refreshed ${target}"
 }
 
+if [ "${SKIP_REFRESH:-0}" = "1" ]; then
+  echo "==> SKIP_REFRESH=1: skipping the 12 live captures; assembling from the committed fixtures"
+else
 echo "==> Refreshing the 12 live-captured fixtures from the cluster (tracked source, not just out/)"
 # NOTE: tp-degraded targets an HTTPRoute in httpbin (TrafficPolicy
 # targetRefs have no namespace field, so the policy must be co-located with
@@ -127,6 +135,7 @@ extract "${DEMO_NS}" backendconfigpolicy/bcp-healthy      BackendConfigPolicy he
 extract "${DEMO_NS}" backendconfigpolicy/bcp-degraded     BackendConfigPolicy degraded
 extract "${DEMO_NS}" directresponse/dr-healthy            DirectResponse      healthy
 extract "${DEMO_NS}" directresponse/dr-unreferenced       DirectResponse      no_status
+fi
 
 echo
 echo "==> Assembling ${OUT} from ${SRC}/ (health.lua, health_test.yaml, testdata/ -- all 21 fixtures: the 12 just-refreshed captures + the 9 tracked fixtures untouched above)"

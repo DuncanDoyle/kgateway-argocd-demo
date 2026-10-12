@@ -1,0 +1,81 @@
+# Everything here runs WITHOUT a Kubernetes cluster.
+#
+# The only part of this repo that needs a live cluster is refreshing fixtures
+# from running kgateway resources, which answers "has kgateway changed its
+# status output?" -- a question no change to this repo can affect. That stays a
+# manual step, tied to a kgateway version bump (see hack/README.md).
+#
+# Everything a commit CAN break is checked below.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  generated:
+    name: Generated files match their source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # SKIP_REFRESH=1 skips the 12 live captures; the tree is assembled from
+      # the fixtures already committed here. Catches the phase-1 failure where
+      # argocd-cm-patch.yaml silently disagreed with the Lua it was rendered
+      # from.
+      - run: SKIP_REFRESH=1 ./hack/check-generated.sh
+
+  harness:
+    name: argo-cd Lua health-check harness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read pins from env.sh
+        id: pins
+        run: |
+          source ./env.sh
+          echo "argocd_ref=${ARGOCD_SRC_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out argo-cd at the pinned revision
+        uses: actions/checkout@v4
+        with:
+          repository: argoproj/argo-cd
+          ref: ${{ steps.pins.outputs.argocd_ref }}
+          path: argo-cd
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: argo-cd/go.mod
+          cache-dependency-path: argo-cd/go.sum
+
+      - name: Assemble the resource_customizations tree
+        run: SKIP_REFRESH=1 ./hack/extract-testdata.sh
+
+      - name: Install it into the argo-cd checkout
+        run: ARGOCD_DIR="${GITHUB_WORKSPACE}/argo-cd" ./hack/install-to-argocd.sh
+
+      - name: Run the harness
+        working-directory: argo-cd
+        run: |
+          set -o pipefail
+          go test ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev' -v \
+            2>&1 | tee /tmp/harness.out
+
+      # The harness generates NO subtests for a kind whose directory lacks a
+      # health.lua, and then reports a cheerful "ok" -- a vacuous pass. So
+      # assert the expected number of subtests actually passed, as a literal.
+      #
+      # Note the leading whitespace in the pattern: Go indents subtest result
+      # lines, so an anchored '^--- PASS' matches NOTHING here and would itself
+      # be a vacuous assertion (verified: it returns 0, not 21).
+      - name: Assert every fixture ran
+        run: |
+          EXPECTED=21
+          n=$(grep -cE '^[[:space:]]+--- PASS: TestLuaHealthScript/gateway\.kgateway\.dev/' /tmp/harness.out || true)
+          echo "passed subtests: ${n} (expected ${EXPECTED})"
+          if [ "$n" -ne "$EXPECTED" ]; then
+            echo "::error::expected ${EXPECTED} passing fixtures, saw ${n}" >&2
+            exit 1
+          fi

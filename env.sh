@@ -23,6 +23,12 @@ export KGATEWAY_CHART="oci://cr.kgateway.dev/kgateway-dev/charts/kgateway"
 export ARGOCD_CHART_REPO="https://argoproj.github.io/argo-helm"
 export ARGOCD_CHART_VERSION="10.9.2"
 
+# argo-cd SOURCE revision, not the chart: the commit of argoproj/argo-cd whose
+# util/lua test harness CI checks out to run the health checks against the
+# committed fixtures. Bump it when rebasing the upstream branch, and re-run the
+# harness locally before bumping -- a newer argo-cd can change the harness.
+export ARGOCD_SRC_REF="2f3711241f94959924650c9ef554f58a7fbd4d26"
+
 # Pinned by digest: fixtures must be reproducible byte-for-byte.
 #
 # Documentation-only: nothing sources this variable. manifests/demo/httpbin.yaml
