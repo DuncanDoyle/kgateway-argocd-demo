@@ -43,11 +43,13 @@ Only relevant once the ConfigMap package has been validated in real use.
 
 ## Before the ConfigMap package is handed to anyone
 
-- [ ] **Verify `setup.sh` on a clean machine.** It has only ever run where the
-      minikube node image and the Helm charts were already cached locally, so
-      the `registry.k8s.io` pull path is untested — and that is the path anyone
-      reproducing from the README takes. Needs a full teardown and rebuild, so
-      do it when the cluster is no longer needed as a fixture source.
+- [x] ~~Verify `setup.sh` on a clean machine.~~ Done 2026-10-12: run against a
+      minikube profile created the same morning, so every image was pulled into
+      an empty containerd store. The original wording was wrong about scope —
+      `setup.sh` does not create the cluster, so the node-image and
+      `registry.k8s.io` paths were never its concern. What it does fetch (the
+      Gateway API CRD manifest, the kgateway OCI charts, the argo-cd chart) is
+      fetched on every run and cannot be masked by a host cache.
 - [ ] **Follow [docs/INSTALL.md](docs/INSTALL.md) end to end on a cluster you
       did not build**, to catch anything that only works here.
 - [x] ~~Bump the pin in `docs/INSTALL.md`.~~ Done 2026-10-12: repinned to

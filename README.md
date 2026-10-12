@@ -33,17 +33,31 @@ Tracks [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
 
 ## Requirements
 
-- A Kubernetes cluster — developed on minikube, but nothing here is minikube-specific
+- A Kubernetes cluster — you create it; `setup.sh` does not. See [Quick start](#quick-start).
 - `kubectl`, `helm`, `curl`, `jq`
 - Only to run the upstream test harness: Go, and a clone of `argoproj/argo-cd`
 
 ## Quick start
 
+`setup.sh` installs the Gateway API CRDs, kgateway and ArgoCD into whatever cluster your current kubectl context points at. **It does not create the cluster.**
+
+This is the configuration the demo is developed and verified against:
+
 ```bash
+minikube start -p kgw-argocd --driver=vfkit --container-runtime=containerd \
+  --kubernetes-version=v1.34.7 --cpus=4 --memory=16384
+kubectl config use-context kgw-argocd
+
 ./setup.sh
 ```
 
-Then follow [DEMO.md](DEMO.md). Teardown is `./teardown.sh`.
+`--driver=vfkit` is macOS on Apple silicon; use `docker`, `kvm2` or whatever suits your machine. Nothing in this repo is minikube-specific — any cluster works. The Kubernetes version is not pinned by anything here, but `GWAPI_VERSION` in [`env.sh`](env.sh) is pinned to the kgateway line, so keep those two in step if you change either.
+
+The 16 GB is what this has been run with, not a measured floor: kgateway, ArgoCD and the demo workload all share it. A smaller allocation tends to fail as pods stuck Pending rather than as an obvious out-of-memory error.
+
+Then follow [DEMO.md](DEMO.md).
+
+Teardown is `./teardown.sh`, which removes everything `setup.sh` installed but leaves ArgoCD's own CRDs — the chart marks them `helm.sh/resource-policy: keep`. To discard the whole cluster instead: `minikube delete -p kgw-argocd`.
 
 ## Verifying the health checks
 

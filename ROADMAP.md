@@ -84,12 +84,13 @@ is behaviour-preserving, so the phase 1 fixtures were its regression test.
 
 Release gates, carried from phase 1 as known gaps rather than discovered late:
 
-- [ ] **Verify `setup.sh` on a clean machine.** It has only ever run where the
-      minikube node image and the kgateway/argo-cd OCI charts were already
-      cached from other profiles, so the `registry.k8s.io` pull path is
-      untested — and that is the path anyone reproducing from the README takes.
-      Testing it means a full teardown and rebuild, so do it when the cluster is
-      no longer needed as a fixture source.
+- [x] ~~Verify `setup.sh` on a clean machine.~~ Done 2026-10-12: run against a
+      minikube profile created the same morning, so every image was pulled into
+      an empty containerd store. The original wording was wrong about scope —
+      `setup.sh` does not create the cluster, so the node-image and
+      `registry.k8s.io` paths were never its concern. What it does fetch (the
+      Gateway API CRD manifest, the kgateway OCI charts, the argo-cd chart) is
+      fetched on every run and cannot be masked by a host cache.
 - [x] Regenerate `healthchecks/argocd-cm-patch.yaml` for all five kinds.
 - [x] Refresh `docs/evidence/` so the before/after capture covers five kinds.
 - [x] Write the package documentation ([docs/INSTALL.md](docs/INSTALL.md)).
