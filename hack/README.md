@@ -115,7 +115,14 @@ They are independent, and each catches what the others cannot:
 
 **`extract-testdata.sh` enumerates what it may overwrite.** Twelve of the 21 fixtures are refreshable from a live cluster; the other nine are derived, hand-captured, or synthetic — states the cluster cannot be made to produce on demand. The script lists those twelve explicitly rather than globbing, so a re-run cannot silently destroy the nine irreplaceable ones.
 
-**It masks `lastTransitionTime` when deciding whether to rewrite a fixture.** A controller re-transition bumps only that field, which would otherwise dirty every tracked fixture on every run and make `check-generated.sh` report drift constantly — the fastest way to teach yourself to ignore it.
+**It ignores volatile fields when deciding whether to rewrite a fixture.** Two change for reasons unrelated to kgateway's behaviour, and would otherwise dirty every tracked fixture whenever the demo cluster is rebuilt:
+
+- `lastTransitionTime` — never read by any health check, so it is masked outright.
+- `generation` / `observedGeneration` — read *only* as a comparison. `isStale()` asks whether they are equal; the absolute numbers carry no meaning, so a resource applied once (`generation: 1`) and the same resource edited six times (`generation: 7`) are the same fixture. Both are replaced by the only thing the Lua can see, `EQ` or `NE`.
+
+Everything the check actually branches on — type, status, reason, message, ancestors, controllerName — is compared verbatim and still forces a write. Verified by two negative tests: tampering with a `reason` is overwritten from the cluster, and forcing `observedGeneration != generation` is detected as an `EQ`→`NE` change.
+
+Without this, a rebuilt cluster produces a four-file diff that means nothing — the fastest way to teach yourself to stop reading the diff.
 
 **It preserves a fixture's leading comment block.** Annotating a fixture with its provenance does not make it un-refreshable.
 

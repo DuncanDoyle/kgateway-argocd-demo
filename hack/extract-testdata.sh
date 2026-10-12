@@ -85,13 +85,33 @@ extract() {
     ' -
   } > "${target}.tmp"
   # Skip the overwrite when the capture is semantically identical to the
-  # tracked fixture. A controller re-transition (e.g. after the probe touches
-  # a resource) bumps only lastTransitionTime, which would otherwise dirty the
-  # tracked file on every run. Masking that one field keeps re-runs idempotent
-  # (and check-generated.sh meaningful) while a genuine status change -- reason,
-  # message, status, ancestors -- still differs after masking and overwrites.
-  mask_ltt() { sed -E 's/(lastTransitionTime:).*/\1 MASKED/' "$1"; }
-  if [ -f "$target" ] && [ "$(mask_ltt "$target")" = "$(mask_ltt "${target}.tmp")" ]; then
+  # tracked fixture -- "semantically" meaning "as the health check reads it".
+  # Two fields change for reasons that have nothing to do with kgateway's
+  # behaviour, and would otherwise dirty every tracked fixture whenever the
+  # demo cluster is rebuilt:
+  #
+  #   lastTransitionTime  never read by any health check. Masked outright.
+  #   generation /        read ONLY as a comparison -- isStale() asks whether
+  #   observedGeneration  condition.observedGeneration equals
+  #                       metadata.generation. The absolute numbers carry no
+  #                       meaning: a resource applied once (generation 1) and
+  #                       the same resource edited six times (generation 7)
+  #                       are the same fixture. So the numbers are replaced by
+  #                       the only thing the Lua can see -- EQ or NE -- which
+  #                       keeps a genuine staleness change (EQ becoming NE)
+  #                       detectable while absolute values are ignored.
+  #
+  # Everything the check actually branches on -- type, status, reason, message,
+  # ancestors, controllerName -- is compared verbatim and still forces a write.
+  mask_volatile() {
+    local gen
+    gen="$(yq '.metadata.generation // "none"' "$1")"
+    sed -E -e 's/(lastTransitionTime:).*/\1 MASKED/' \
+           -e "s/(observedGeneration:) ${gen}\$/\1 EQ/" \
+           -e 's/(observedGeneration:) [0-9]+$/\1 NE/' \
+           -e 's/(^[[:space:]]*generation:).*/\1 MASKED/' "$1"
+  }
+  if [ -f "$target" ] && [ "$(mask_volatile "$target")" = "$(mask_volatile "${target}.tmp")" ]; then
     rm -f "${target}.tmp"
   else
     mv "${target}.tmp" "$target"
