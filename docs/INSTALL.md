@@ -38,7 +38,7 @@ git clone https://github.com/DuncanDoyle/kgateway-argocd-demo.git
 cd kgateway-argocd-demo
 
 # Pin to the commit this guide was verified against; `main` may move.
-git checkout d034785778416113695a3f7b2f339bbd6c14f2e5
+git checkout 8766e513b4bea4cbfedd9b6d9aaa57f6f2d8c92a
 
 # This file contains Lua that will run inside your ArgoCD. Read it first.
 less healthchecks/argocd-cm-patch.yaml
@@ -49,7 +49,7 @@ kubectl -n argocd patch configmap argocd-cm \
   --patch-file healthchecks/argocd-cm-patch.yaml
 ```
 
-Without cloning, download just the file: `curl -sLO https://raw.githubusercontent.com/DuncanDoyle/kgateway-argocd-demo/d034785778416113695a3f7b2f339bbd6c14f2e5/healthchecks/argocd-cm-patch.yaml`. Either way, review the file before applying it: it is Lua executed by your ArgoCD application controller.
+Without cloning, download just the file: `curl -sLO https://raw.githubusercontent.com/DuncanDoyle/kgateway-argocd-demo/8766e513b4bea4cbfedd9b6d9aaa57f6f2d8c92a/healthchecks/argocd-cm-patch.yaml`. Either way, review the file before applying it: it is Lua executed by your ArgoCD application controller.
 
 ArgoCD reads `argocd-cm` live, so nothing needs restarting. But **Applications cache per-resource health and do not re-evaluate it when `argocd-cm` changes**; badges stay blank until the next reconcile, which can be minutes away. Force it:
 
@@ -65,7 +65,7 @@ Overrides in `argocd-cm` take precedence over anything ArgoCD later bundles, so 
 
 ### Route B — argo-helm values
 
-`healthchecks/argocd-helm-values.yaml` in this repo carries the same five scripts shaped as chart values, under `configs.cm`. Merge it into your values file, or pass it alongside:
+`healthchecks/argocd-helm-values.yaml` in this repo carries the same five scripts shaped as chart values, under `configs.cm`. Without cloning: `curl -sLO https://raw.githubusercontent.com/DuncanDoyle/kgateway-argocd-demo/8766e513b4bea4cbfedd9b6d9aaa57f6f2d8c92a/healthchecks/argocd-helm-values.yaml`. Review it first — it is Lua that will run inside your application controller. Merge it into your values file, or pass it alongside:
 
 ```bash
 helm upgrade --install argo-cd argo/argo-cd -n argocd \

@@ -50,10 +50,11 @@ Only relevant once the ConfigMap package has been validated in real use.
       do it when the cluster is no longer needed as a fixture source.
 - [ ] **Follow [docs/INSTALL.md](docs/INSTALL.md) end to end on a cluster you
       did not build**, to catch anything that only works here.
-- [ ] **Bump the pin in `docs/INSTALL.md`.** The patch file changed (header
-      note) and `healthchecks/argocd-helm-values.yaml` is new, so the pinned
-      commit `d034785` predates both — route B's file does not exist there.
-      Must be updated in or immediately after the commit that lands these.
+- [x] ~~Bump the pin in `docs/INSTALL.md`.~~ Done 2026-10-12: repinned to
+      `8766e51`, the commit carrying both the current patch file and
+      `argocd-helm-values.yaml`. **The pinned URLs only resolve once this
+      branch is pushed** — until then the guide points at a commit GitHub has
+      never seen.
 - [ ] **Run a live `helm upgrade` with `argocd-helm-values.yaml`.** The values
       shape is verified by `helm template` against chart 10.9.2 (all five keys
       land in `argocd-cm`, Lua byte-identical to the patch), but no actual
