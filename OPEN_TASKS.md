@@ -55,10 +55,13 @@ Only relevant once the ConfigMap package has been validated in real use.
       `argocd-helm-values.yaml`. **The pinned URLs only resolve once this
       branch is pushed** — until then the guide points at a commit GitHub has
       never seen.
-- [ ] **Run a live `helm upgrade` with `argocd-helm-values.yaml`.** The values
-      shape is verified by `helm template` against chart 10.9.2 (all five keys
-      land in `argocd-cm`, Lua byte-identical to the patch), but no actual
-      upgrade has been performed.
+- [x] ~~Run a live `helm upgrade` with `argocd-helm-values.yaml`.~~ Done
+      2026-10-12: all five keys removed from `argocd-cm` first, then restored by
+      a real `helm upgrade` on chart 10.9.2. Lua byte-identical to
+      `healthchecks/lua/<shape>/health.lua` for all five kinds; `server.insecure`,
+      `controller.resource.health.persist` and `timeout.reconciliation` all
+      survived; badges rendered Healthy/Degraded/Progressing after a hard
+      refresh.
 - [ ] Note the untested paths that document already declares:
       `controller.resource.health.persist` unset, and the `curl` alternative.
 

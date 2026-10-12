@@ -27,7 +27,7 @@ DirectResponse/dr-healthy                  (none)        Healthy
 
 **Which route do you need?** If your `argocd-cm` is managed declaratively — the argo-helm chart, a GitOps repo, Kustomize — a `kubectl patch` is reverted the next time that source is applied. Use route B.
 
-**What has been tested.** Executed live: route A's install and removal, hard refresh, and the UI-visible result via the Application status. Route B's values file was verified by rendering the chart (`helm template`) and confirming all five keys land in `argocd-cm` with the Lua byte-identical to route A's — but no live `helm upgrade` was run. Not executed at all: behaviour with `controller.resource.health.persist` unset, the `curl` alternative, and the controller-restart steps. Treat those as higher risk.
+**What has been tested.** Both routes executed live against kgateway v2.4.5 and argo-cd chart 10.9.2: install, removal, hard refresh, and the resulting health reported by the Application. Route B was proven by removing all five keys from `argocd-cm`, running a real `helm upgrade`, and confirming the keys came back with the Lua byte-identical to the repo's sources and the badges rendering again (`Healthy`, `Degraded`, `Progressing`). Not executed: behaviour with `controller.resource.health.persist` unset, the `curl` alternative, and the controller-restart steps. Treat those as higher risk.
 
 ### Route A — patch `argocd-cm` directly
 
@@ -73,7 +73,7 @@ helm upgrade --install argo-cd argo/argo-cd -n argocd \
   -f healthchecks/argocd-helm-values.yaml
 ```
 
-Order matters: later `-f` files win, so keep this one last. The chart merges `configs.cm` into the `argocd-cm` it renders, leaving its own defaults in place — verified by rendering chart 10.9.2 and diffing the result.
+Order matters in two ways. Later `-f` files win, so keep this one last — and **pass every values file you normally pass.** Helm does not merge with what is already installed; a `helm upgrade` given only this file replaces your configuration with chart defaults plus these five keys. If you manage ArgoCD with a single values file, merge the keys into it rather than passing two. The chart merges `configs.cm` into the `argocd-cm` it renders, leaving its own defaults in place — verified by rendering chart 10.9.2 and diffing the result.
 
 The health entries alone need no restart. The file also carries a commented-out `configs.params` block for `controller.resource.health.persist`; enable it only if you read health from `kubectl` rather than the UI, and note that it *does* restart the application controller.
 
