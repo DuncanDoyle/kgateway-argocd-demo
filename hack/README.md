@@ -14,14 +14,14 @@ These are maintainer scripts, and they are **trigger-based, not scheduled**. The
 
 | Trigger | Run |
 |---|---|
-| You edited a `health.lua` | `render-argocd-cm.sh`, then `extract-testdata.sh`, then `install-to-argocd.sh`, then `go test` in the argo-cd clone |
+| You edited a `health.lua` | `render-packages.sh`, then `extract-testdata.sh`, then `install-to-argocd-clone.sh`, then `go test` in the argo-cd clone |
 | You added a CRD kind | add it to `kind-shapes.sh` first, then the same chain |
 | You bumped the kgateway version | See [Revalidating against a new kgateway](#revalidating-against-a-new-kgateway) below — it needs a rebuilt cluster, not just the script. |
 | Before sharing the ConfigMap package with anyone | `check-generated.sh`, then `capture-evidence.sh` |
 | Before proposing upstream | all of the above, against a current `upstream/master` |
 | Someone reports a resource showing the wrong health | `extract-testdata.sh` to capture the real status, then compare against the fixture you have |
 
-The ordering within the first row matters: `render-argocd-cm.sh` and `extract-testdata.sh` both read the Lua, and `install-to-argocd.sh` copies what `extract-testdata.sh` assembled, so running the installer first copies the previous run's output.
+The ordering within the first row matters: `render-packages.sh` and `extract-testdata.sh` both read the Lua, and `install-to-argocd-clone.sh` copies what `extract-testdata.sh` assembled, so running the installer first copies the previous run's output.
 
 ### Revalidating against a new kgateway
 
@@ -35,10 +35,10 @@ The one task that genuinely needs a cluster. A new kgateway release can change t
 
 **Exit 1 with a diff is the finding**, not a failure — the refreshed fixtures are left in your working tree, so `git diff healthchecks/` shows exactly what moved. kgateway changed what it writes; the question is whether the Lua still reaches the right verdict from the new shape:
 
-4. `./hack/install-to-argocd.sh`, then `go test ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'` in the argo-cd clone. A failing `health_test.yaml` expectation here *is* the bug report — kgateway moved and the health check did not follow.
+4. `./hack/install-to-argocd-clone.sh`, then `go test ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'` in the argo-cd clone. A failing `health_test.yaml` expectation here *is* the bug report — kgateway moved and the health check did not follow.
 5. Update whatever the change invalidated: the Lua if a verdict is now wrong; `health_test.yaml` if an expected message changed; [COVERAGE.md](../COVERAGE.md), which records observed behaviour against a named kgateway version; `kind-shapes.sh` and new fixtures if kgateway added a kind.
 
-`render-argocd-cm.sh` is only needed if step 5 changed the Lua — and CI catches a forgotten re-render on the next push.
+`render-packages.sh` is only needed if step 5 changed the Lua — and CI catches a forgotten re-render on the next push.
 
 ### What CI covers, and what it cannot
 
@@ -58,9 +58,9 @@ A timer would be worse than nothing, for two reasons. The demo cluster is miniku
 | Script | What it does |
 |---|---|
 | `kind-shapes.sh` | **A library, not a command.** Eight lines mapping each CRD kind to its status shape. `source`d by the three scripts below that need to fan out. |
-| `render-argocd-cm.sh` | Lua → the two installable artefacts: `argocd-cm-patch.yaml` (kubectl) and `argocd-helm-values.yaml` (argo-helm). Same scripts, different wrapper. |
+| `render-packages.sh` | Lua → the two installable artefacts: `argocd-cm-patch.yaml` (kubectl) and `argocd-helm-values.yaml` (argo-helm). Same scripts, different wrapper. |
 | `extract-testdata.sh` | Live cluster → test fixtures, then assembles `out/resource_customizations/`. |
-| `install-to-argocd.sh` | Copies that tree into a local `argoproj/argo-cd` clone. |
+| `install-to-argocd-clone.sh` | Copies that tree into a local `argoproj/argo-cd` clone. |
 | `check-generated.sh` | Fails if any committed generated file no longer matches its source. |
 | `capture-evidence.sh` | Regenerates `docs/evidence/{before,after}.txt` against a live ArgoCD. |
 
@@ -128,7 +128,7 @@ Without this, a rebuilt cluster produces a four-file diff that means nothing —
 
 **The completeness check iterates the authored directories, not the generated ones.** A kind missing from `kind-shapes.sh` produces no output directory, so checking the output cannot see the omission — and argo-cd's harness reports a cheerful `ok` for a directory with no `health.lua`. Without this check, a forgotten kind looks exactly like a pass.
 
-**`install-to-argocd.sh` refuses a source containing no `health.lua`.** It uses `rsync --delete`, so an empty `out/` after a half-failed generator run would not merely be useless — it would wipe the destination, including uncommitted work in your argo-cd clone.
+**`install-to-argocd-clone.sh` refuses a source containing no `health.lua`.** It uses `rsync --delete`, so an empty `out/` after a half-failed generator run would not merely be useless — it would wipe the destination, including uncommitted work in your argo-cd clone.
 
 **The set of resources with no status is pinned as a literal (`EXPECT_NO_STATUS`).** Three resources legitimately carry no `status` subresource at all — `tp-progressing`, `lp-unattached`, `dr-unreferenced` — because kgateway writes nothing for a policy that attached to nothing, not even an empty list. Those absences *are* three of the fixtures. But an absent status is also what a broken capture looks like, and it would silently become a fixture asserting nothing, so the script fails if the set is not exactly those three, and on success prints one line naming what it matched. It deliberately does not print a per-resource `WARNING`: an expected state announced as a warning on every run is how a reader learns to ignore the output. A resource that lost its status is a kgateway behaviour change; one that gained it means a fixture now captures something else.
 

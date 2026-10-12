@@ -14,7 +14,7 @@ if ! git diff --quiet -- healthchecks/; then
 fi
 
 ./hack/extract-testdata.sh >/dev/null
-./hack/render-argocd-cm.sh >/dev/null
+./hack/render-packages.sh >/dev/null
 
 if ! git diff --exit-code -- healthchecks/; then
   echo "ERROR: generated artefacts under healthchecks/ have drifted from their source (diff above)" >&2

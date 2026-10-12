@@ -54,7 +54,7 @@ jobs:
         run: SKIP_REFRESH=1 ./hack/extract-testdata.sh
 
       - name: Install it into the argo-cd checkout
-        run: ARGOCD_DIR="${GITHUB_WORKSPACE}/argo-cd" ./hack/install-to-argocd.sh
+        run: ARGOCD_DIR="${GITHUB_WORKSPACE}/argo-cd" ./hack/install-to-argocd-clone.sh
 
       - name: Run the harness
         working-directory: argo-cd

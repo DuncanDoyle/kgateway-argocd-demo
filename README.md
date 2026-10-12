@@ -53,7 +53,7 @@ The real gate is argo-cd's own test harness, not the badges in the UI.
 
 ```bash
 ./hack/extract-testdata.sh      # refresh fixtures from the cluster, assemble out/
-./hack/install-to-argocd.sh     # mirror that tree into your argo-cd clone
+./hack/install-to-argocd-clone.sh     # mirror that tree into your argo-cd clone
 cd <path-to-argo-cd-clone>
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'
 ```
@@ -64,7 +64,7 @@ Verified against argo-cd `2f3711241` (the base of the upstream branch): 21 passi
 
 **`extract-testdata.sh` needs all three Applications deployed, not just the demo.** It refreshes 12 fixtures from the live cluster and 7 of those come from the coverage resources, so it fails on the first resource it cannot find. Follow [DEMO.md](DEMO.md) through step 2, which also explains why the coverage Application has to be applied *after* `kgw-demo` has synced.
 
-`install-to-argocd.sh` reads the clone location from `ARGOCD_DIR` (it sets a default; override it for yours). It refuses an empty source and syncs only the `resource_customizations/gateway.kgateway.dev` directory, so uncommitted work elsewhere in your clone is never touched. Prefer it over `cp -r`, which leaves stale files behind when a fixture is removed.
+`install-to-argocd-clone.sh` reads the clone location from `ARGOCD_DIR` (it sets a default; override it for yours). It refuses an empty source and syncs only the `resource_customizations/gateway.kgateway.dev` directory, so uncommitted work elsewhere in your clone is never touched. Prefer it over `cp -r`, which leaves stale files behind when a fixture is removed.
 
 ### Why health does not show up in `kubectl`
 

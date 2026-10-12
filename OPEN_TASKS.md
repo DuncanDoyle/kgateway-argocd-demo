@@ -104,12 +104,12 @@ and the sync step no longer assumes a logged-in `argocd` CLI.
       argo-cd Lua harness on every push. Refreshing fixtures from a live
       cluster remains manual and is triggered by a kgateway version bump, not a
       schedule — see `hack/README.md`.
-- [ ] `hack/install-to-argocd.sh` tests `-d "$ARGOCD_DIR/.git"`, which rejects
+- [ ] `hack/install-to-argocd-clone.sh` tests `-d "$ARGOCD_DIR/.git"`, which rejects
       a git worktree or submodule checkout where `.git` is a file. Use `-e`.
       Fails safe today.
-- [ ] `hack/install-to-argocd.sh`'s trailing `git status` can make the script
+- [ ] `hack/install-to-argocd-clone.sh`'s trailing `git status` can make the script
       exit non-zero after a successful sync, under `set -e`.
-- [ ] `hack/install-to-argocd.sh`'s content guard requires only **one**
+- [ ] `hack/install-to-argocd-clone.sh`'s content guard requires only **one**
       `health.lua` in the source, so a half-generated tree could still let
       `rsync --delete` drop the rest from the destination.
 - [ ] `hack/capture-evidence.sh`'s "key absent" check treats a `kubectl get`
