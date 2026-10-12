@@ -3,7 +3,7 @@
 Deferred work, in rough priority order. See [ROADMAP.md](ROADMAP.md) for the
 programme view and what each phase covers.
 
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-12
 
 ## Current approach: ConfigMap first, upstream later
 
@@ -50,8 +50,18 @@ Only relevant once the ConfigMap package has been validated in real use.
       `registry.k8s.io` paths were never its concern. What it does fetch (the
       Gateway API CRD manifest, the kgateway OCI charts, the argo-cd chart) is
       fetched on every run and cannot be masked by a host cache.
-- [ ] **Follow [docs/INSTALL.md](docs/INSTALL.md) end to end on a cluster you
-      did not build**, to catch anything that only works here.
+- [x] ~~**Follow [docs/INSTALL.md](docs/INSTALL.md) end to end on a cluster you
+      did not build.**~~ Done 2026-10-12 on minikube profile `kgw-stock`, with
+      ArgoCD v3.5.5 installed from the **upstream manifest** rather than the
+      chart — no `setup.sh` values, `controller.resource.health.persist` unset,
+      TLS on, and nine pre-existing `argocd-cm` keys. Route A applied from the
+      v0.0.1 release asset via `curl`. Result: the five keys merged without
+      disturbing the nine; `kgw-scenarios` flipped `Healthy` -> `Degraded` over
+      rejected resources *without* enabling persistence; per-resource badges
+      rendered correctly once it was enabled; the documented removal loop
+      restored `argocd-cm` to its exact original key set. Three doc defects
+      found and fixed, listed below. (EKS was considered and rejected: the risk
+      lives in the ArgoCD configuration, not the cloud substrate.)
 - [x] ~~Bump the pin in `docs/INSTALL.md`.~~ Done 2026-10-12: repinned to
       `8766e51`, the commit carrying both the current patch file and
       `argocd-helm-values.yaml`. **The pinned URLs only resolve once this
@@ -64,8 +74,12 @@ Only relevant once the ConfigMap package has been validated in real use.
       `controller.resource.health.persist` and `timeout.reconciliation` all
       survived; badges rendered Healthy/Degraded/Progressing after a hard
       refresh.
-- [ ] Note the untested paths that document already declares:
-      `controller.resource.health.persist` unset, and the `curl` alternative.
+- [x] ~~Note the untested paths that document already declares.~~ Resolved
+      2026-10-12: both were executed on `kgw-stock`. `persist` unset is the
+      stock default and is now the primary tested path; the `curl` download of
+      the release asset drove Route A there. Route B's `curl` download and
+      ArgoCD 2.x remain the only untested paths, and "What has been tested" now
+      says exactly that.
 
 ## Documentation gaps
 
@@ -81,10 +95,15 @@ and the sync step no longer assumes a logged-in `argocd` CLI.
       `hack/capture-evidence.sh` by hand. Note that `EXPECTED_RESOURCES=14` in
       that script would catch a count change *when run*, but nothing prompts
       the run.
-- [ ] `docs/INSTALL.md` does not state its `jq` prerequisite, used by the key
-      removal loop.
-- [ ] `docs/INSTALL.md`'s `kubectl rollout restart` line names a
-      release-specific StatefulSet; the "name varies" note is easy to miss.
+- [x] ~~`docs/INSTALL.md` does not state its `jq` prerequisite.~~ Fixed
+      2026-10-12: the comment above the removal loop now names it.
+- [x] ~~`docs/INSTALL.md`'s `kubectl rollout restart` line names a
+      release-specific StatefulSet.~~ Fixed 2026-10-12. The hardcoded
+      `argo-cd-argocd-application-controller` is the argo-helm name and simply
+      fails on a stock install, where it is `argocd-application-controller` —
+      confirmed live on `kgw-stock`. Replaced with a lookup on
+      `app.kubernetes.io/name=argocd-application-controller`, which both shapes
+      carry (verified live for stock, and by rendering chart 10.9.2 for helm).
 - [ ] `README.md` says `hack/check-generated.sh` needs "the live cluster"; it
       actually needs the cluster **in the states the fixtures expect**.
 - [ ] `COVERAGE.md`'s fixtures table says "none reachable" for

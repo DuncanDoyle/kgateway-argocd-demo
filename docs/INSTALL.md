@@ -27,7 +27,7 @@ DirectResponse/dr-healthy                  (none)        Healthy
 
 **Which route do you need?** If your `argocd-cm` is managed declaratively — the argo-helm chart, a GitOps repo, Kustomize — a `kubectl patch` is reverted the next time that source is applied. Use route B.
 
-**What has been tested.** Both routes executed live against kgateway v2.4.5 and argo-cd chart 10.9.2: install, removal, hard refresh, and the resulting health reported by the Application. Route B was proven by removing all five keys from `argocd-cm`, running a real `helm upgrade`, and confirming the keys came back with the Lua byte-identical to the repo's sources and the badges rendering again (`Healthy`, `Degraded`, `Progressing`). Not executed: behaviour with `controller.resource.health.persist` unset, the `curl` alternative, and the controller-restart steps. Treat those as higher risk.
+**What has been tested.** Install, removal, hard refresh and the resulting health, executed live against kgateway v2.4.5 on two different ArgoCD installations: argo-helm chart 10.9.2 (both routes; route B proven by stripping all five keys from `argocd-cm`, running a real `helm upgrade`, and confirming they came back with the Lua byte-identical to this repo's sources), and a stock `kubectl apply` install of ArgoCD v3.5.5 from the upstream manifest, with `controller.resource.health.persist` **unset** and TLS on — a configuration nobody here tuned. On that stock cluster the five keys merged into a non-empty `argocd-cm` without disturbing its nine existing keys, an Application over rejected resources flipped from `Healthy` to `Degraded`, per-resource badges rendered `Healthy`/`Degraded`/`Progressing` once persistence was enabled, and the removal procedure restored the ConfigMap to its exact original key set. Route A on that stock cluster was driven from the `curl` download of the v0.0.1 release asset, not a clone, and the Lua that landed in `argocd-cm` was byte-identical to `healthchecks/lua/<shape>/health.lua` for all five kinds. Not executed: ArgoCD 2.x, and route B's `curl` download.
 
 ### Route A — patch `argocd-cm` directly
 
@@ -140,6 +140,16 @@ Open the Application. Each kgateway resource has a health icon; the badge messag
 
 ### From the CLI
 
+Start with the Application's rolled-up health, which needs no configuration at all:
+
+```bash
+kubectl -n argocd get application <your-app>
+```
+
+`status.health.status` is computed whether or not per-resource health is persisted, so this is the one CLI check that works on a stock ArgoCD. It is also the check that matters: an Application containing a rejected `Backend` or `TrafficPolicy` should now read `Degraded` where it previously read `Healthy`. If it does, the entries are working.
+
+For per-resource detail:
+
 ```bash
 kubectl -n argocd get application <your-app> \
   -o jsonpath='{range .status.resources[?(@.group=="gateway.kgateway.dev")]}{.kind}{"/"}{.name}{" -> "}{.health.status}{"\n"}{end}'
@@ -152,11 +162,16 @@ To make the CLI path work, enable persistence in `argocd-cmd-params-cm` and rest
 ```bash
 kubectl -n argocd patch configmap argocd-cmd-params-cm --type=merge \
   -p '{"data":{"controller.resource.health.persist":"true"}}'
-kubectl -n argocd rollout restart statefulset argo-cd-argocd-application-controller   # name varies by install
-kubectl -n argocd rollout status statefulset argo-cd-argocd-application-controller
+# The controller's StatefulSet name depends on how ArgoCD was installed:
+# `argocd-application-controller` for a stock `kubectl apply` of the upstream
+# manifest, `<release>-argocd-application-controller` under argo-helm. Ask the
+# cluster rather than guessing.
+CTRL=$(kubectl -n argocd get statefulset -l app.kubernetes.io/name=argocd-application-controller -o jsonpath='{.items[0].metadata.name}')
+kubectl -n argocd rollout restart statefulset "$CTRL"
+kubectl -n argocd rollout status  statefulset "$CTRL"
 ```
 
-(With argo-helm: `configs.params."controller.resource.health.persist": "true"`, and the chart restarts the controller for you.) Then hard-refresh the Application again. To summarise: the **UI never needs this**; only reading health from `kubectl` does. Note that the Application's own overall health (`status.health.status`) is computed either way, so `kubectl get application` shows the rolled-up result without it.
+(With argo-helm: `configs.params."controller.resource.health.persist": "true"`, and the chart restarts the controller for you.) Then hard-refresh the Application again. To summarise: the **UI never needs this**, and neither does the rolled-up Application health above; only the per-resource `kubectl` path does.
 
 ## When it is safe to remove
 
@@ -166,7 +181,8 @@ These entries are an override, and they stay valid after ArgoCD ships its own kg
 - **Switch to ArgoCD's bundled checks**, by deleting these keys. Check the release notes of the ArgoCD version you run, confirm it includes `gateway.kgateway.dev` checks, then:
 
 ```bash
-# Remove all five keys. Absent keys are an error to the JSON patch, hence the guard.
+# Remove all five keys. Absent keys are an error to the JSON patch, hence the
+# `jq` guard -- this loop needs `jq` on your PATH.
 for k in Backend TrafficPolicy ListenerPolicy BackendConfigPolicy DirectResponse; do
   key="resource.customizations.health.gateway.kgateway.dev_${k}"
   if kubectl -n argocd get cm argocd-cm -o json | jq -e --arg key "$key" '.data | has($key)' >/dev/null; then
