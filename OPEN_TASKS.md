@@ -92,21 +92,12 @@ and the sync step no longer assumes a logged-in `argocd` CLI.
 
 ## Tooling
 
-- [ ] **The pin in `docs/INSTALL.md` can go stale silently.** It points at a
-      specific commit of `healthchecks/argocd-cm-patch.yaml` so readers get
-      reviewed code rather than whatever `main` holds. If the patch changes and
-      the pin is not bumped, readers quietly get superseded Lua.
-      Enforce it in `hack/check-generated.sh` — but compare **blob content**
-      (`git rev-parse <pin>:healthchecks/argocd-cm-patch.yaml` against
-      `HEAD:…`), not commit SHAs: a SHA check can never pass on the very commit
-      that changes the patch and updates the pin together, because that
-      commit's own SHA is not knowable when writing it.
-- [x] ~~Nothing runs `check-generated.sh` automatically.~~ Resolved
-      2026-10-12: `SKIP_REFRESH=1` makes `extract-testdata.sh` cluster-free, so
-      `.github/workflows/ci.yml` now runs both the generated-file check and the
-      argo-cd Lua harness on every push. Refreshing fixtures from a live
-      cluster remains manual and is triggered by a kgateway version bump, not a
-      schedule — see `hack/README.md`.
+- [x] ~~The pin in `docs/INSTALL.md` can go stale silently.~~ Resolved
+      2026-10-12 by releasing: the guide now points at the `v0.0.1` release and
+      its attached artefacts instead of a commit SHA. A release tag is created
+      after its content exists, so there is no self-reference to work around and
+      nothing to remember to bump. (The blob-content check described here is
+      still the right answer if a SHA pin is ever reintroduced.)
 - [ ] `hack/install-to-argocd-clone.sh` tests `-d "$ARGOCD_DIR/.git"`, which rejects
       a git worktree or submodule checkout where `.git` is a file. Use `-e`.
       Fails safe today.

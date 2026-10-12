@@ -37,8 +37,8 @@ You need `kubectl` access to the namespace ArgoCD runs in (`argocd` below) and a
 git clone https://github.com/DuncanDoyle/kgateway-argocd-demo.git
 cd kgateway-argocd-demo
 
-# Pin to the commit this guide was verified against; `main` may move.
-git checkout 8766e513b4bea4cbfedd9b6d9aaa57f6f2d8c92a
+# Check out the released version; `main` may move.
+git checkout v0.0.1
 
 # This file contains Lua that will run inside your ArgoCD. Read it first.
 less healthchecks/argocd-cm-patch.yaml
@@ -49,7 +49,7 @@ kubectl -n argocd patch configmap argocd-cm \
   --patch-file healthchecks/argocd-cm-patch.yaml
 ```
 
-Without cloning, download just the file: `curl -sLO https://raw.githubusercontent.com/DuncanDoyle/kgateway-argocd-demo/8766e513b4bea4cbfedd9b6d9aaa57f6f2d8c92a/healthchecks/argocd-cm-patch.yaml`. Either way, review the file before applying it: it is Lua executed by your ArgoCD application controller.
+Without cloning, download it from the release: `curl -sLO https://github.com/DuncanDoyle/kgateway-argocd-demo/releases/download/v0.0.1/argocd-cm-patch.yaml`. Either way, review the file before applying it: it is Lua executed by your ArgoCD application controller.
 
 ArgoCD reads `argocd-cm` live, so nothing needs restarting. But **Applications cache per-resource health and do not re-evaluate it when `argocd-cm` changes**; badges stay blank until the next reconcile, which can be minutes away. Force it:
 
@@ -65,21 +65,35 @@ Overrides in `argocd-cm` take precedence over anything ArgoCD later bundles, so 
 
 ### Route B — argo-helm values
 
-`healthchecks/argocd-helm-values.yaml` in this repo carries the same five scripts shaped as chart values, under `configs.cm`. Without cloning: `curl -sLO https://raw.githubusercontent.com/DuncanDoyle/kgateway-argocd-demo/8766e513b4bea4cbfedd9b6d9aaa57f6f2d8c92a/healthchecks/argocd-helm-values.yaml`. Review it first — it is Lua that will run inside your application controller. Merge it into your values file, or pass it alongside:
+`healthchecks/argocd-helm-values.yaml` carries the same five scripts shaped as chart values, under `configs.cm`. Without cloning: `curl -sLO https://github.com/DuncanDoyle/kgateway-argocd-demo/releases/download/v0.0.1/argocd-helm-values.yaml`. Review it first — it is Lua that will run inside your application controller.
+
+Then pick whichever matches how your ArgoCD is deployed.
+
+**B1 — merge the keys into your own values file (recommended).** Copy the `configs.cm` block into the values file you already maintain, and apply it the way you always do. Nothing else changes, and there is no way to forget a file.
+
+**B2 — ArgoCD manages itself.** If ArgoCD is deployed by an Application in your cluster (self-managed, or an app-of-apps), do not run `helm` at all: commit the `configs.cm` keys into the values that Application references, and let it sync itself. Expect one reconcile of ArgoCD by ArgoCD.
+
+**B3 — you run `helm upgrade` by hand.**
 
 ```bash
 helm upgrade --install argo-cd argo/argo-cd -n argocd \
   -f your-values.yaml \
-  -f healthchecks/argocd-helm-values.yaml
+  -f argocd-helm-values.yaml
 ```
 
-Order matters in two ways. Later `-f` files win, so keep this one last — and **pass every values file you normally pass.** Helm does not merge with what is already installed; a `helm upgrade` given only this file replaces your configuration with chart defaults plus these five keys. If you manage ArgoCD with a single values file, merge the keys into it rather than passing two. The chart merges `configs.cm` into the `argocd-cm` it renders, leaving its own defaults in place — verified by rendering chart 10.9.2 and diffing the result.
+Two things about ordering. Later `-f` files win, so keep this one last. And **pass every values file you normally pass**: Helm builds the release from the flags of that one invocation, not from what is currently installed, so an upgrade given only this file replaces your configuration with chart defaults plus these five keys. Your SSO, ingress, RBAC and repository settings would revert, and the only thing you changed was adding a health-check file.
 
-The health entries alone need no restart. The file also carries a commented-out `configs.params` block for `controller.resource.health.persist`; enable it only if you read health from `kubectl` rather than the UI, and note that it *does* restart the application controller.
+If you are not certain what is currently set, read it back before upgrading:
 
-Hard-refresh your Applications after the upgrade, exactly as in route A.
+```bash
+helm get values argo-cd -n argocd
+```
 
-**For Kustomize or a GitOps repo**, take the five keys from either file and merge them into whatever renders your `argocd-cm`. The Lua is identical in both; only the nesting differs.
+**For Kustomize or a plain GitOps repo**, take the five keys from either artefact and merge them into whatever renders your `argocd-cm`. The Lua is identical in both; only the nesting differs.
+
+Whichever route: the chart merges `configs.cm` into the `argocd-cm` it renders, leaving its own defaults in place — verified by rendering chart 10.9.2 and diffing. The health entries need no restart, but Applications cache per-resource health, so hard-refresh them afterwards exactly as in Route A.
+
+The file also carries a commented-out `configs.params` block for `controller.resource.health.persist`. Enable it only if you read health from `kubectl` rather than the UI, and note that it *does* restart the application controller.
 
 ## What is covered
 
