@@ -119,12 +119,12 @@ extract() {
 
   # An ABSENT status is a legitimate state (e.g. tp-progressing): a policy
   # that attaches to nothing never gets a status subresource written at
-  # all -- not an empty ancestors list. Warn rather than fail, but make the
-  # absence loud so it is never silently mistaken for a dump error.
+  # all -- not an empty ancestors list. Just record it; the set is checked
+  # against EXPECT_NO_STATUS once every capture is in, which is a real
+  # assertion rather than a line a reader has to count.
   if ! echo "$json" | yq -e '.status' - >/dev/null 2>&1; then
     local name
     name="$(echo "$json" | yq '.metadata.name' -)"
-    echo "WARNING: no status on ${name}" >&2
     SAW_NO_STATUS="${SAW_NO_STATUS}${name} "
   fi
 
@@ -177,6 +177,10 @@ extract "${DEMO_NS}" directresponse/dr-unreferenced       DirectResponse      no
     echo "  re-read COVERAGE.md before updating EXPECT_NO_STATUS." >&2
     exit 1
   fi
+  # Say so on success too: a silent assertion is indistinguishable from one
+  # that never ran. These three are expected, not a problem -- hence no
+  # "WARNING", which would cry wolf on every single run.
+  echo "no status on $(printf '%s' "${saw}" | wc -w | tr -d ' ') resources, as expected: ${saw}"
 fi
 
 echo
