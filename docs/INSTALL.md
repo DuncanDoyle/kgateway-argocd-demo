@@ -103,7 +103,7 @@ Hosted control planes do not all give you `kubectl` access to the ArgoCD namespa
 - **Codefresh GitOps Runtime.** The runtime runs in your own cluster and embeds the standard argo-helm `argo-cd` chart as a subchart, so this is route B1 with one extra level of nesting: put the `configs.cm` block under an `argo-cd:` key in the runtime's values.
 - **EKS Capability for Argo CD.** You create an `argocd-cm` ConfigMap in the capability's namespace and AWS reads the supported settings from it. `resource.customizations.health.<group>_<kind>` is supported and documented as *overriding* the capability's built-in checks. Two differences from route A: the ConfigMap **must carry the label `app.kubernetes.io/part-of: argocd`**, and it may not exist yet — `kubectl patch` fails on an absent ConfigMap, so create it with `kubectl apply` on the first install.
 
-**On Lua portability.** The EKS capability forces `useOpenLibs` off, and it is off by default everywhere else too. These scripts use only `ipairs` and string concatenation, both of which ArgoCD's sandbox provides unconditionally, so they run unchanged wherever ArgoCD does. Scripts that reach for `string.format` or similar do not.
+**On Lua portability.** ArgoCD gives a health script the full Lua standard library only when the script is bundled in an ArgoCD release; one delivered through `argocd-cm`, as these are, runs with `useOpenLibs` off unless you opt in per kind. The EKS capability forces it off regardless. These scripts need nothing beyond `ipairs` and string concatenation, which the sandbox always provides — verified by running all 21 fixtures through ArgoCD's own harness with the standard libraries disabled. So they run unchanged on every host above, with no extra keys.
 
 ## What is covered
 

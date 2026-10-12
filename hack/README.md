@@ -113,7 +113,18 @@ They are independent, and each catches what the others cannot:
 
 ## Design decisions worth knowing before editing
 
-**Keep the Lua inside the always-available sandbox.** ArgoCD runs health scripts with `useOpenLibs` off by default, and some hosts — the EKS Capability for Argo CD, for one — force it off with no way to turn it on. In that mode `argo-cd` opens only the base, table and a stubbed `os` library (`util/lua/lua.go`, `runLuaWithResourceActionParameters`), so `string.*` and `math.*` are **not** there. Both current scripts stay within this by using nothing but `ipairs` and the `..` operator, which is why they run unchanged on every host checked. If you reach for `string.format` to build a message, you will break managed ArgoCD users and the local test harness will not tell you, because the harness enables open libraries.
+**Keep the Lua inside the always-available sandbox.** Whether a health script gets Lua's standard libraries depends on how it is *delivered*, and we are on the restricted side of that split (`util/lua/lua.go`, `GetHealthScript`):
+
+| Delivery | `useOpenLibs` | Available |
+|---|---|---|
+| Bundled in an ArgoCD release | always `true` | full standard library |
+| `argocd-cm` entry (**this repo**) | `false` unless you set `resource.customizations.useOpenLibs.<group>_<Kind>` | base, table, stubbed `os` only |
+
+So `string.*` and `math.*` are **absent** for the way we ship. Both scripts stay inside this by using nothing but `ipairs` and the `..` operator. Verified 2026-10-12: with `UseOpenLibs` flipped to `false`, all 21 of our fixtures still pass, while eight bundled upstream checks fail outright on `string.find`, `string.len` and `string.match` — they can afford those, we cannot.
+
+**The harness will not catch a violation.** `util/lua/health_test.go` sets `UseOpenLibs: true`, so it exercises the bundled path, not ours. A script using `string.format` to build a nicer message would pass CI green and fail in every user's `argocd-cm`. There is an escape hatch — `resource.customizations.useOpenLibs.gateway.kgateway.dev_<Kind>: "true"` — but using it would mean asking every user to add five more keys, so treat the restricted set as the contract instead.
+
+Note the asymmetry if these ever go upstream: a merged script *gains* the standard library, so upstream review would not flag a `string.*` call that breaks our ConfigMap package.
 
 
 **`extract-testdata.sh` enumerates what it may overwrite.** Twelve of the 21 fixtures are refreshable from a live cluster; the other nine are derived, hand-captured, or synthetic — states the cluster cannot be made to produce on demand. The script lists those twelve explicitly rather than globbing, so a re-run cannot silently destroy the nine irreplaceable ones.
