@@ -50,22 +50,31 @@ Only relevant once the ConfigMap package has been validated in real use.
       do it when the cluster is no longer needed as a fixture source.
 - [ ] **Follow [docs/INSTALL.md](docs/INSTALL.md) end to end on a cluster you
       did not build**, to catch anything that only works here.
-- [ ] Note the untested paths that document already declares: the Helm-based
-      install routes, `controller.resource.health.persist` unset, and the
-      `curl` alternative.
+- [ ] **Bump the pin in `docs/INSTALL.md`.** The patch file changed (header
+      note) and `healthchecks/argocd-helm-values.yaml` is new, so the pinned
+      commit `d034785` predates both — route B's file does not exist there.
+      Must be updated in or immediately after the commit that lands these.
+- [ ] **Run a live `helm upgrade` with `argocd-helm-values.yaml`.** The values
+      shape is verified by `helm template` against chart 10.9.2 (all five keys
+      land in `argocd-cm`, Lua byte-identical to the patch), but no actual
+      upgrade has been performed.
+- [ ] Note the untested paths that document already declares:
+      `controller.resource.health.persist` unset, and the `curl` alternative.
 
 ## Documentation gaps
 
-- [ ] `DEMO.md` does not say that `kgw-scenarios` is also required before
-      `hack/extract-testdata.sh` will succeed. It is implied by the README's
-      "all three Applications" and by the Failure scenarios section, but not
-      stated where a reader needs it.
-- [ ] `DEMO.md` uses `argocd app sync` without a login step, and the
-      Requirements list does not mention the `argocd` CLI. The "or press Sync
-      in the UI" alternative covers it, but the CLI path reads as if it will
-      just work.
-- [ ] Nothing tells the reader to wait for `kgw-demo` to be Healthy before
-      applying the coverage Application.
+Resolved 2026-10-12 in the README/DEMO readability pass: the three-Application
+structure is now introduced before the names are used, `kgw-scenarios` is named
+as a prerequisite of the capture scripts, the wait-for-Healthy gate is explicit,
+and the sync step no longer assumes a logged-in `argocd` CLI.
+
+- [ ] `docs/evidence/{before,after}.txt` can go stale without anything
+      noticing: `hack/check-generated.sh` only diffs `healthchecks/`. If the
+      demo or coverage manifests gain or lose a resource, the committed
+      evidence keeps showing the old capture until someone re-runs
+      `hack/capture-evidence.sh` by hand. Note that `EXPECTED_RESOURCES=14` in
+      that script would catch a count change *when run*, but nothing prompts
+      the run.
 - [ ] `docs/INSTALL.md` does not state its `jq` prerequisite, used by the key
       removal loop.
 - [ ] `docs/INSTALL.md`'s `kubectl rollout restart` line names a
@@ -88,6 +97,12 @@ Only relevant once the ConfigMap package has been validated in real use.
       `HEAD:…`), not commit SHAs: a SHA check can never pass on the very commit
       that changes the patch and updates the pin together, because that
       commit's own SHA is not knowable when writing it.
+- [x] ~~Nothing runs `check-generated.sh` automatically.~~ Resolved
+      2026-10-12: `SKIP_REFRESH=1` makes `extract-testdata.sh` cluster-free, so
+      `.github/workflows/ci.yml` now runs both the generated-file check and the
+      argo-cd Lua harness on every push. Refreshing fixtures from a live
+      cluster remains manual and is triggered by a kgateway version bump, not a
+      schedule — see `hack/README.md`.
 - [ ] `hack/install-to-argocd.sh` tests `-d "$ARGOCD_DIR/.git"`, which rejects
       a git worktree or submodule checkout where `.git` is a file. Use `-e`.
       Fails safe today.

@@ -55,4 +55,4 @@ echo
 echo "Setup complete."
 echo "  GatewayClass:   $(kubectl get gatewayclass kgateway -o jsonpath='{.metadata.name}' 2>/dev/null || echo MISSING)"
 echo "  ArgoCD admin:   kubectl -n ${ARGOCD_NS} get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
-echo "  ArgoCD UI:      kubectl -n ${ARGOCD_NS} port-forward svc/argo-cd-argocd-server 8080:80"
+echo "  ArgoCD UI:      kubectl -n ${ARGOCD_NS} port-forward svc/argo-cd-argocd-server 8081:80"
