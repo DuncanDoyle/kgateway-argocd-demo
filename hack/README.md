@@ -113,6 +113,9 @@ They are independent, and each catches what the others cannot:
 
 ## Design decisions worth knowing before editing
 
+**Keep the Lua inside the always-available sandbox.** ArgoCD runs health scripts with `useOpenLibs` off by default, and some hosts — the EKS Capability for Argo CD, for one — force it off with no way to turn it on. In that mode `argo-cd` opens only the base, table and a stubbed `os` library (`util/lua/lua.go`, `runLuaWithResourceActionParameters`), so `string.*` and `math.*` are **not** there. Both current scripts stay within this by using nothing but `ipairs` and the `..` operator, which is why they run unchanged on every host checked. If you reach for `string.format` to build a message, you will break managed ArgoCD users and the local test harness will not tell you, because the harness enables open libraries.
+
+
 **`extract-testdata.sh` enumerates what it may overwrite.** Twelve of the 21 fixtures are refreshable from a live cluster; the other nine are derived, hand-captured, or synthetic — states the cluster cannot be made to produce on demand. The script lists those twelve explicitly rather than globbing, so a re-run cannot silently destroy the nine irreplaceable ones.
 
 **It ignores volatile fields when deciding whether to rewrite a fixture.** Two change for reasons unrelated to kgateway's behaviour, and would otherwise dirty every tracked fixture whenever the demo cluster is rebuilt:

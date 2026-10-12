@@ -25,7 +25,7 @@ DirectResponse/dr-healthy                  (none)        Healthy
 
 ## Install
 
-**Which route do you need?** If your `argocd-cm` is managed declaratively — the argo-helm chart, a GitOps repo, Kustomize — a `kubectl patch` is reverted the next time that source is applied. Use route B.
+**Which route do you need?** If your `argocd-cm` is managed declaratively — the argo-helm chart, a GitOps repo, Kustomize — a `kubectl patch` is reverted the next time that source is applied. Use route B. If you are on a hosted or managed ArgoCD, see [route C](#route-c--hosted-and-managed-argocd).
 
 **What has been tested.** Install, removal, hard refresh and the resulting health, executed live against kgateway v2.4.5 on two different ArgoCD installations: argo-helm chart 10.9.2 (both routes; route B proven by stripping all five keys from `argocd-cm`, running a real `helm upgrade`, and confirming they came back with the Lua byte-identical to this repo's sources), and a stock `kubectl apply` install of ArgoCD v3.5.5 from the upstream manifest, with `controller.resource.health.persist` **unset** and TLS on — a configuration nobody here tuned. On that stock cluster the five keys merged into a non-empty `argocd-cm` without disturbing its nine existing keys, an Application over rejected resources flipped from `Healthy` to `Degraded`, per-resource badges rendered `Healthy`/`Degraded`/`Progressing` once persistence was enabled, and the removal procedure restored the ConfigMap to its exact original key set. Route A on that stock cluster was driven from the `curl` download of the v0.0.1 release asset, not a clone, and the Lua that landed in `argocd-cm` was byte-identical to `healthchecks/lua/<shape>/health.lua` for all five kinds. Not executed: ArgoCD 2.x, and route B's `curl` download.
 
@@ -91,9 +91,19 @@ helm get values argo-cd -n argocd
 
 **For Kustomize or a plain GitOps repo**, take the five keys from either artefact and merge them into whatever renders your `argocd-cm`. The Lua is identical in both; only the nesting differs.
 
-Whichever route: the chart merges `configs.cm` into the `argocd-cm` it renders, leaving its own defaults in place — verified by rendering chart 10.9.2 and diffing. The health entries need no restart, but Applications cache per-resource health, so hard-refresh them afterwards exactly as in Route A.
+In any of the B variants: the chart merges `configs.cm` into the `argocd-cm` it renders, leaving its own defaults in place — verified by rendering chart 10.9.2 and diffing. The health entries need no restart, but Applications cache per-resource health, so hard-refresh them afterwards exactly as in Route A.
 
 The file also carries a commented-out `configs.params` block for `controller.resource.health.persist`. Enable it only if you read health from `kubectl` rather than the UI, and note that it *does* restart the application controller.
+
+### Route C — hosted and managed ArgoCD
+
+Hosted control planes do not all give you `kubectl` access to the ArgoCD namespace, and the ones that do may not let you edit `argocd-cm` freely. All three major offerings support these entries; only the surface differs. The five keys and their Lua are identical in every case.
+
+- **Akuity Platform.** Settings → Resource Customizations → Add Customization, giving the Group/Kind and the Health Check for each of the five kinds. Akuity's declarative instance spec also accepts an `argocd-cm` ConfigMap with `resource.customizations.health.<group>_<Kind>` keys directly, which is the easier path for five of them — take them from `argocd-cm-patch.yaml` unchanged.
+- **Codefresh GitOps Runtime.** The runtime runs in your own cluster and embeds the standard argo-helm `argo-cd` chart as a subchart, so this is route B1 with one extra level of nesting: put the `configs.cm` block under an `argo-cd:` key in the runtime's values.
+- **EKS Capability for Argo CD.** You create an `argocd-cm` ConfigMap in the capability's namespace and AWS reads the supported settings from it. `resource.customizations.health.<group>_<kind>` is supported and documented as *overriding* the capability's built-in checks. Two differences from route A: the ConfigMap **must carry the label `app.kubernetes.io/part-of: argocd`**, and it may not exist yet — `kubectl patch` fails on an absent ConfigMap, so create it with `kubectl apply` on the first install.
+
+**On Lua portability.** The EKS capability forces `useOpenLibs` off, and it is off by default everywhere else too. These scripts use only `ipairs` and string concatenation, both of which ArgoCD's sandbox provides unconditionally, so they run unchanged wherever ArgoCD does. Scripts that reach for `string.format` or similar do not.
 
 ## What is covered
 
