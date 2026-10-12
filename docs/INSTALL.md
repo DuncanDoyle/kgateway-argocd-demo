@@ -25,7 +25,11 @@ DirectResponse/dr-healthy                  (none)        Healthy
 
 ## Install
 
-**What has been tested.** Executed live: the install, the removal, hard refresh, and the UI-visible result via the Application status. Not executed: the argo-helm (`configs.cm`, `configs.params`) paths, behaviour with `controller.resource.health.persist` unset, the `curl` alternative, and the controller-restart steps. Treat those as higher risk.
+**Which route do you need?** If your `argocd-cm` is managed declaratively — the argo-helm chart, a GitOps repo, Kustomize — a `kubectl patch` is reverted the next time that source is applied. Use route B.
+
+**What has been tested.** Executed live: route A's install and removal, hard refresh, and the UI-visible result via the Application status. Route B's values file was verified by rendering the chart (`helm template`) and confirming all five keys land in `argocd-cm` with the Lua byte-identical to route A's — but no live `helm upgrade` was run. Not executed at all: behaviour with `controller.resource.health.persist` unset, the `curl` alternative, and the controller-restart steps. Treat those as higher risk.
+
+### Route A — patch `argocd-cm` directly
 
 You need `kubectl` access to the namespace ArgoCD runs in (`argocd` below) and a copy of the patch file, which is checked into this repo:
 
@@ -59,7 +63,23 @@ kubectl -n argocd annotate application <your-app> \
 
 Overrides in `argocd-cm` take precedence over anything ArgoCD later bundles, so read [When it is safe to remove](#when-it-is-safe-to-remove) before you forget these are installed.
 
-If you manage `argocd-cm` declaratively (the argo-helm chart, a GitOps repo, Kustomize), the patch will be reverted the next time that source is applied. Put the five keys in that source instead; for argo-helm they go under `configs.cm`.
+### Route B — argo-helm values
+
+`healthchecks/argocd-helm-values.yaml` in this repo carries the same five scripts shaped as chart values, under `configs.cm`. Merge it into your values file, or pass it alongside:
+
+```bash
+helm upgrade --install argo-cd argo/argo-cd -n argocd \
+  -f your-values.yaml \
+  -f healthchecks/argocd-helm-values.yaml
+```
+
+Order matters: later `-f` files win, so keep this one last. The chart merges `configs.cm` into the `argocd-cm` it renders, leaving its own defaults in place — verified by rendering chart 10.9.2 and diffing the result.
+
+The health entries alone need no restart. The file also carries a commented-out `configs.params` block for `controller.resource.health.persist`; enable it only if you read health from `kubectl` rather than the UI, and note that it *does* restart the application controller.
+
+Hard-refresh your Applications after the upgrade, exactly as in route A.
+
+**For Kustomize or a GitOps repo**, take the five keys from either file and merge them into whatever renders your `argocd-cm`. The Lua is identical in both; only the nesting differs.
 
 ## What is covered
 
