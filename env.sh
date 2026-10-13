@@ -7,7 +7,7 @@
 # HTTPS, not SSH: ArgoCD pulls this repo anonymously, and this demo
 # deliberately avoids provisioning a deploy-key Secret for it. The SSH
 # remote (git@github.com:...) is only used for our own `git push`.
-export REPO_URL="https://github.com/DuncanDoyle/kgateway-argocd-demo.git"
+export REPO_URL="https://github.com/DuncanDoyle/kgateway-argocd-healthchecks.git"
 export REPO_REVISION="HEAD"
 
 # --- pinned external artifacts --------------------------------------------

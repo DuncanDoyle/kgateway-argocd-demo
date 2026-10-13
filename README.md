@@ -1,6 +1,8 @@
-# kgateway + ArgoCD health-check demo
+# ArgoCD health checks for kgateway
 
-ArgoCD ships no health checks for `gateway.kgateway.dev/*` resources, so they show `(none)` in the resource tree — an Application can be fully synced while the policies inside it are rejected, and the UI says nothing. This repo writes those health checks, and deploys a real kgateway demo through ArgoCD to prove them against real status.
+ArgoCD ships no health checks for `gateway.kgateway.dev/*` resources, so they show `(none)` in the resource tree — an Application can be fully synced while the policies inside it are rejected, and the UI says nothing. This repo is the source for those health checks. It also deploys a real kgateway demo through ArgoCD, because that demo is how the checks are proven against real status rather than hand-written fixtures.
+
+To install them, you need nothing from this repo but one generated file — see [docs/INSTALL.md](docs/INSTALL.md).
 
 Tracks [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
 
