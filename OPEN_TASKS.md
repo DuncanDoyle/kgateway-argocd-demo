@@ -3,7 +3,7 @@
 Deferred work, in rough priority order. See [ROADMAP.md](ROADMAP.md) for the
 programme view and what each phase covers.
 
-**Last updated:** 2026-10-12
+**Last updated:** 2026-10-13
 
 ## Current approach: ConfigMap first, upstream later
 
@@ -148,4 +148,8 @@ and the sync step no longer assumes a logged-in `argocd` CLI.
 - [ ] [kgateway#14792](https://github.com/kgateway-dev/kgateway/issues/14792) —
       `GatewayExtension` declares a status subresource but never populates it.
       Filed 2026-10-06. Until it is implemented, `GatewayExtension` cannot have
-      a meaningful health check and stays excluded.
+      a meaningful health check and stays excluded. Tracked on our side as
+      [#1](https://github.com/DuncanDoyle/kgateway-argocd-demo/issues/1), which
+      carries the done-when list; a contributor volunteered upstream on
+      2026-10-13 proposing the `Backend` conditions pattern, which our existing
+      Lua would cover with no new script.
